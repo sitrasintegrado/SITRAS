@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getTrips, getVehicles, getDrivers } from '@/lib/store';
+import { useTrips, useVehicles, useDrivers } from '@/hooks/use-supabase-data';
 import { exportTripsPDF } from '@/lib/pdf-export';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 
 const Relatorios = () => {
   const { toast } = useToast();
-  const trips = getTrips();
-  const vehicles = getVehicles();
-  const drivers = getDrivers();
+  const { trips } = useTrips();
+  const { vehicles } = useVehicles();
+  const { drivers } = useDrivers();
 
   const today = new Date().toISOString().split('T')[0];
   const [dateFrom, setDateFrom] = useState(today);

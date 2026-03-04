@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Driver } from '@/types';
-import { getDrivers, saveDrivers, generateId } from '@/lib/store';
+import { useDrivers } from '@/hooks/use-supabase-data';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ const emptyDriver: Omit<Driver, 'id'> = { name: '', phone: '', cnh: '', cnhCateg
 
 const Motoristas = () => {
   const { toast } = useToast();
-  const [drivers, setDrivers] = useState(getDrivers());
+  const { drivers, save, update, remove } = useDrivers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyDriver);
@@ -23,31 +23,26 @@ const Motoristas = () => {
   const openNew = () => { setEditId(null); setForm(emptyDriver); setDialogOpen(true); };
   const openEdit = (d: Driver) => { setEditId(d.id); setForm(d); setDialogOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.cnh) { toast({ title: 'Preencha nome e CNH', variant: 'destructive' }); return; }
-    let updated: Driver[];
     if (editId) {
-      updated = drivers.map(d => d.id === editId ? { ...form, id: editId } : d);
+      await update(editId, form);
     } else {
-      updated = [...drivers, { ...form, id: generateId() }];
+      await save(form);
     }
-    saveDrivers(updated);
-    setDrivers(updated);
     setDialogOpen(false);
     toast({ title: editId ? 'Motorista atualizado' : 'Motorista cadastrado' });
   };
 
-  const handleDelete = (id: string) => {
-    const updated = drivers.filter(d => d.id !== id);
-    saveDrivers(updated);
-    setDrivers(updated);
+  const handleDelete = async (id: string) => {
+    await remove(id);
     toast({ title: 'Motorista excluído' });
   };
 
   const isExpiringSoon = (date: string) => {
     if (!date) return false;
     const diff = new Date(date).getTime() - Date.now();
-    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000; // 30 days
+    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
   };
 
   const isExpired = (date: string) => {

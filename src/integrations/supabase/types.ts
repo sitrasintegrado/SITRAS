@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      drivers: {
+        Row: {
+          cnh: string
+          cnh_category: string
+          cnh_expiry: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          cnh?: string
+          cnh_category?: string
+          cnh_expiry?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string
+        }
+        Update: {
+          cnh?: string
+          cnh_category?: string
+          cnh_expiry?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      patients: {
+        Row: {
+          address: string
+          cpf: string
+          created_at: string
+          id: string
+          name: string
+          notes: string
+          phone: string
+        }
+        Insert: {
+          address?: string
+          cpf?: string
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string
+          phone?: string
+        }
+        Update: {
+          address?: string
+          cpf?: string
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      trip_passengers: {
+        Row: {
+          has_companion: boolean
+          id: string
+          patient_id: string
+          trip_id: string
+        }
+        Insert: {
+          has_companion?: boolean
+          id?: string
+          patient_id: string
+          trip_id: string
+        }
+        Update: {
+          has_companion?: boolean
+          id?: string
+          patient_id?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_passengers_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_passengers_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          consult_location: string
+          created_at: string
+          date: string
+          departure_time: string
+          destination: string
+          driver_id: string | null
+          id: string
+          notes: string
+          status: Database["public"]["Enums"]["trip_status"]
+          vehicle_id: string | null
+        }
+        Insert: {
+          consult_location?: string
+          created_at?: string
+          date: string
+          departure_time?: string
+          destination?: string
+          driver_id?: string | null
+          id?: string
+          notes?: string
+          status?: Database["public"]["Enums"]["trip_status"]
+          vehicle_id?: string | null
+        }
+        Update: {
+          consult_location?: string
+          created_at?: string
+          date?: string
+          departure_time?: string
+          destination?: string
+          driver_id?: string | null
+          id?: string
+          notes?: string
+          status?: Database["public"]["Enums"]["trip_status"]
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          capacity: number
+          created_at: string
+          id: string
+          plate: string
+          status: Database["public"]["Enums"]["vehicle_status"]
+          type: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          id?: string
+          plate?: string
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          type?: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          id?: string
+          plate?: string
+          status?: Database["public"]["Enums"]["vehicle_status"]
+          type?: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +199,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      trip_status: "Confirmada" | "Cancelada" | "Concluída"
+      vehicle_status: "Ativo" | "Manutenção" | "Inativo"
+      vehicle_type: "Carro" | "Van" | "Ônibus"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +328,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      trip_status: ["Confirmada", "Cancelada", "Concluída"],
+      vehicle_status: ["Ativo", "Manutenção", "Inativo"],
+      vehicle_type: ["Carro", "Van", "Ônibus"],
+    },
   },
 } as const
