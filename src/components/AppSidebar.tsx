@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText,
-  ShieldCheck, LogOut, ChevronUp,
+  ShieldCheck, LogOut, ChevronUp, Wrench,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +62,7 @@ export function AppSidebar() {
     { title: 'Pacientes', url: '/pacientes', icon: Users },
     { title: 'Veículos', url: '/veiculos', icon: Car },
     { title: 'Motoristas', url: '/motoristas', icon: UserCog },
+    { title: 'Manutenção', url: '/manutencao', icon: Wrench },
   ];
 
   const otherItems = [

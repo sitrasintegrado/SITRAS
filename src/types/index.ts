@@ -17,9 +17,20 @@ export interface Vehicle {
   chassi: string;
   capacity: number;
   status: 'Ativo' | 'Manutenção' | 'Inativo';
-  lastMaintenance: string;
-  nextReview: string;
-  oilChangeKm: number | null;
+}
+
+export interface Maintenance {
+  id: string;
+  vehicleId: string;
+  date: string;
+  type: 'preventiva' | 'corretiva' | 'emergencial';
+  partReplaced: string;
+  description: string;
+  cost: number;
+  workshop: string;
+  nextReviewDate: string;
+  nextReviewKm: number | null;
+  vehicleKm: number | null;
 }
 
 export interface Driver {

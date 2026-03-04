@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Patient, Vehicle, Driver, Trip, TripPassenger } from '@/types';
+import { Patient, Vehicle, Driver, Trip, TripPassenger, Maintenance } from '@/types';
 
 // ── Patients ──
 export function usePatients() {
@@ -46,9 +46,6 @@ export function useVehicles() {
       modelo: (r as any).modelo || '', ano: (r as any).ano || null,
       renavam: (r as any).renavam || '', chassi: (r as any).chassi || '',
       capacity: r.capacity, status: r.status as Vehicle['status'],
-      lastMaintenance: (r as any).last_maintenance || '',
-      nextReview: (r as any).next_review || '',
-      oilChangeKm: (r as any).oil_change_km || null,
     })));
     setLoading(false);
   }, []);
@@ -59,7 +56,6 @@ export function useVehicles() {
     await supabase.from('vehicles').insert({
       type: v.type, plate: v.plate, capacity: v.capacity, status: v.status,
       modelo: v.modelo, ano: v.ano, renavam: v.renavam, chassi: v.chassi,
-      last_maintenance: v.lastMaintenance || null, next_review: v.nextReview || null, oil_change_km: v.oilChangeKm,
     } as any);
     await fetch();
   };
@@ -68,7 +64,6 @@ export function useVehicles() {
     await supabase.from('vehicles').update({
       type: v.type, plate: v.plate, capacity: v.capacity, status: v.status,
       modelo: v.modelo, ano: v.ano, renavam: v.renavam, chassi: v.chassi,
-      last_maintenance: v.lastMaintenance || null, next_review: v.nextReview || null, oil_change_km: v.oilChangeKm,
     } as any).eq('id', id);
     await fetch();
   };
@@ -182,4 +177,59 @@ export function useTrips() {
   };
 
   return { trips, loading, save, update, remove, refetch: fetch };
+}
+
+// ── Maintenances ──
+export function useMaintenances() {
+  const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    const { data } = await supabase.from('maintenances').select('*').order('date', { ascending: false });
+    if (data) setMaintenances((data as any[]).map(r => ({
+      id: r.id,
+      vehicleId: r.vehicle_id,
+      date: r.date,
+      type: r.type,
+      partReplaced: r.part_replaced || '',
+      description: r.description || '',
+      cost: Number(r.cost) || 0,
+      workshop: r.workshop || '',
+      nextReviewDate: r.next_review_date || '',
+      nextReviewKm: r.next_review_km || null,
+      vehicleKm: r.vehicle_km || null,
+    })));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const save = async (m: Omit<Maintenance, 'id'>) => {
+    await supabase.from('maintenances').insert({
+      vehicle_id: m.vehicleId, date: m.date, type: m.type,
+      part_replaced: m.partReplaced, description: m.description,
+      cost: m.cost, workshop: m.workshop,
+      next_review_date: m.nextReviewDate || null,
+      next_review_km: m.nextReviewKm, vehicle_km: m.vehicleKm,
+    } as any);
+    await fetch();
+  };
+
+  const update = async (id: string, m: Omit<Maintenance, 'id'>) => {
+    await supabase.from('maintenances').update({
+      vehicle_id: m.vehicleId, date: m.date, type: m.type,
+      part_replaced: m.partReplaced, description: m.description,
+      cost: m.cost, workshop: m.workshop,
+      next_review_date: m.nextReviewDate || null,
+      next_review_km: m.nextReviewKm, vehicle_km: m.vehicleKm,
+    } as any).eq('id', id);
+    await fetch();
+  };
+
+  const remove = async (id: string) => {
+    await supabase.from('maintenances').delete().eq('id', id);
+    await fetch();
+  };
+
+  return { maintenances, loading, save, update, remove, refetch: fetch };
 }
