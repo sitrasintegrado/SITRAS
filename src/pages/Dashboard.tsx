@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CalendarDays, Car, Users, UserCog, AlertTriangle, ShieldAlert,
-  TrendingUp, Clock, MapPin, Filter, ChevronRight, Wrench, Ban
+  TrendingUp, Clock, MapPin, Filter, ChevronRight, Wrench, Ban, Droplets
 } from 'lucide-react';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -72,6 +72,22 @@ const Dashboard = () => {
       .filter(d => d.status !== 'valid')
       .sort((a, b) => a.daysLeft - b.daysLeft);
   }, [drivers]);
+
+  const maintenanceAlerts = useMemo(() => {
+    const now = new Date();
+    return vehicles.map(v => {
+      const alerts: string[] = [];
+      let severity: 'ok' | 'warning' | 'danger' = 'ok' as 'ok' | 'warning' | 'danger';
+
+      if (v.nextReview) {
+        const days = differenceInDays(parseISO(v.nextReview), now);
+        if (days < 0) { alerts.push(`Revisão vencida há ${Math.abs(days)}d`); severity = 'danger'; }
+        else if (days <= 15) { alerts.push(`Revisão em ${days}d`); severity = 'warning'; }
+      }
+
+      return { vehicle: v, alerts, severity };
+    }).filter(a => a.alerts.length > 0);
+  }, [vehicles]);
 
   const statusConfig = (s: string) => {
     if (s === 'Confirmada') return { bg: 'bg-info/10 text-info border-info/20', dot: 'bg-info' };
@@ -254,6 +270,44 @@ const Dashboard = () => {
                     variant="outline"
                   >
                     {d.status === 'expired' ? `Vencida há ${Math.abs(d.daysLeft)}d` : `${d.daysLeft}d restantes`}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Maintenance Alerts */}
+      {maintenanceAlerts.length > 0 && (
+        <Card className="border-warning/30 shadow-md overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-warning to-destructive" />
+          <CardHeader className="pb-3 pt-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-warning" />
+              Alertas de Manutenção
+              <Badge variant="outline" className="ml-auto text-[10px] border-warning/30 text-warning">
+                {maintenanceAlerts.length} veículo{maintenanceAlerts.length > 1 ? 's' : ''}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="space-y-2">
+              {maintenanceAlerts.map(a => (
+                <div key={a.vehicle.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${a.severity === 'danger' ? 'bg-destructive' : 'bg-warning'}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{a.vehicle.modelo} — {a.vehicle.plate}</p>
+                      <p className="text-[11px] text-muted-foreground">{a.alerts.join(' • ')}</p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] shrink-0 ${a.severity === 'danger' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-warning/10 text-warning border-warning/20'}`}
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {a.severity === 'danger' ? 'Urgente' : 'Atenção'}
                   </Badge>
                 </div>
               ))}

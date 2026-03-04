@@ -213,7 +213,10 @@ export type Database = {
           chassi: string
           created_at: string
           id: string
+          last_maintenance: string | null
           modelo: string
+          next_review: string | null
+          oil_change_km: number | null
           plate: string
           renavam: string
           status: Database["public"]["Enums"]["vehicle_status"]
@@ -225,7 +228,10 @@ export type Database = {
           chassi?: string
           created_at?: string
           id?: string
+          last_maintenance?: string | null
           modelo?: string
+          next_review?: string | null
+          oil_change_km?: number | null
           plate?: string
           renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]
@@ -237,7 +243,10 @@ export type Database = {
           chassi?: string
           created_at?: string
           id?: string
+          last_maintenance?: string | null
           modelo?: string
+          next_review?: string | null
+          oil_change_km?: number | null
           plate?: string
           renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]

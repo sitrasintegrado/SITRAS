@@ -17,6 +17,9 @@ export interface Vehicle {
   chassi: string;
   capacity: number;
   status: 'Ativo' | 'Manutenção' | 'Inativo';
+  lastMaintenance: string;
+  nextReview: string;
+  oilChangeKm: number | null;
 }
 
 export interface Driver {
