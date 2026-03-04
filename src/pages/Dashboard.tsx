@@ -40,6 +40,24 @@ const Dashboard = () => {
     return { total: todayTrips.length, passengers: totalPassengers, confirmed, concluded, cancelled };
   }, [trips, today]);
 
+  const managerial = useMemo(() => {
+    const currentMonth = today.slice(0, 7);
+    const monthTrips = trips.filter(t => t.date.startsWith(currentMonth));
+    const todayTrips = trips.filter(t => t.date === today);
+    const paxToday = todayTrips.reduce((s, t) => s + t.passengers.length, 0);
+    const activeVehicles = vehicles.filter(v => v.status === 'Ativo');
+    const usedVehicleIds = new Set(todayTrips.filter(t => t.vehicleId).map(t => t.vehicleId));
+    const availableVehicles = activeVehicles.filter(v => !usedVehicleIds.has(v.id)).length;
+    const totalCapacity = todayTrips.reduce((s, t) => {
+      const v = vehicles.find(ve => ve.id === t.vehicleId);
+      return s + (v?.capacity || 0);
+    }, 0);
+    const totalOccupied = todayTrips.reduce((s, t) =>
+      s + t.passengers.reduce((ps, p) => ps + 1 + (p.hasCompanion ? 1 : 0), 0), 0);
+    const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+    return { monthTrips: monthTrips.length, paxToday, availableVehicles, occupancyRate };
+  }, [trips, vehicles, today]);
+
   const cnhAlerts = useMemo(() => {
     const now = new Date();
     return drivers
