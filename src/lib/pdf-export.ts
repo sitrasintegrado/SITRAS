@@ -1,6 +1,29 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Trip, Vehicle, Driver, Patient } from '@/types';
+import logoUrl from '@/assets/logo.png';
+
+// ── Logo cache ──
+let logoBase64: string | null = null;
+
+async function getLogoBase64(): Promise<string | null> {
+  if (logoBase64) return logoBase64;
+  try {
+    const response = await fetch(logoUrl);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        logoBase64 = reader.result as string;
+        resolve(logoBase64);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
 
 // ── helpers ──
 function genCode() {
@@ -26,7 +49,7 @@ interface ReportOptions {
   userName: string;
 }
 
-function addHeader(doc: jsPDF, title: string, subtitle: string, code: string, userName: string) {
+function addHeader(doc: jsPDF, title: string, subtitle: string, code: string, userName: string, logo: string | null) {
   const w = doc.internal.pageSize.getWidth();
 
   // Blue header bar
@@ -37,15 +60,28 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, code: string, us
   doc.setFillColor(34, 139, 34);
   doc.rect(0, 32, w, 2, 'F');
 
+  // Logo
+  const textStartX = logo ? 30 : 14;
+  if (logo) {
+    try {
+      // White circle background for logo
+      doc.setFillColor(255, 255, 255);
+      doc.circle(16, 16, 10, 'F');
+      doc.addImage(logo, 'PNG', 7, 7, 18, 18);
+    } catch {
+      // fallback: no logo
+    }
+  }
+
   // Title
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('SITRAS Saúde', 14, 14);
+  doc.text('SITRAS Saúde', textStartX, 14);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Sistema Integrado de Transporte Sanitário', 14, 20);
+  doc.text('Sistema Integrado de Transporte Sanitário', textStartX, 20);
 
   // Report title right-aligned
   doc.setFontSize(11);
@@ -72,7 +108,6 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number, code: string
   const w = doc.internal.pageSize.getWidth();
   const h = doc.internal.pageSize.getHeight();
 
-  // Footer line
   doc.setDrawColor(30, 64, 120);
   doc.setLineWidth(0.5);
   doc.line(14, h - 25, w - 14, h - 25);
@@ -88,7 +123,6 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number, code: string
   doc.text('SITRAS Saúde — Documento gerado eletronicamente', w / 2, h - 12, { align: 'center' });
   doc.text(`Página ${pageNum} de ${totalPages}`, w - 14, h - 12, { align: 'right' });
 
-  // Signature area
   doc.setDrawColor(0, 0, 0);
   doc.line(w - 80, h - 30, w - 14, h - 30);
   doc.setFontSize(6);
@@ -123,14 +157,15 @@ function buildTripRows(
 
 const tripHead = [['#', 'Data', 'Hora', 'Destino', 'Local Consulta', 'Veículo', 'Motorista', 'Pac.', 'Acomp.', 'Status']];
 
-function buildDoc(opts: ReportOptions, extraSubtitle?: string): void {
+async function buildDoc(opts: ReportOptions, extraSubtitle?: string): Promise<void> {
   const { trips, vehicles, drivers, patients, title, subtitle, userName } = opts;
   const code = genCode();
   const doc = new jsPDF({ orientation: 'landscape' });
+  const logo = await getLogoBase64();
 
   const fullSubtitle = [subtitle, extraSubtitle].filter(Boolean).join(' — ');
 
-  addHeader(doc, title, fullSubtitle, code, userName);
+  addHeader(doc, title, fullSubtitle, code, userName, logo);
 
   const rows = buildTripRows(trips, vehicles, drivers, patients);
 
@@ -146,12 +181,10 @@ function buildDoc(opts: ReportOptions, extraSubtitle?: string): void {
     didDrawPage: () => {},
   });
 
-  // Totals summary
   const totalPax = trips.reduce((s, t) => s + t.passengers.length, 0);
   const totalAcomp = trips.reduce((s, t) => s + t.passengers.filter(p => p.hasCompanion).length, 0);
   const totalsStr = `Total de viagens: ${trips.length} | Pacientes transportados: ${totalPax} | Acompanhantes: ${totalAcomp}`;
 
-  // Add footers to all pages
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
@@ -161,90 +194,59 @@ function buildDoc(opts: ReportOptions, extraSubtitle?: string): void {
   doc.save(`sitras_${code}.pdf`);
 }
 
-// ── Detailed passenger table for single-trip reports ──
-function buildPassengerSection(
-  doc: jsPDF,
-  trip: Trip,
-  patients: Patient[],
-  startY: number,
-): number {
-  const rows = trip.passengers.map((p, i) => {
-    const pat = patients.find(pt => pt.id === p.patientId);
-    return [String(i + 1), pat?.name || '—', pat?.cpf || '—', pat?.phone || '—', p.hasCompanion ? 'Sim' : 'Não'];
-  });
-
-  autoTable(doc, {
-    startY,
-    head: [['#', 'Paciente', 'CPF', 'Telefone', 'Acompanhante']],
-    body: rows,
-    theme: 'grid',
-    headStyles: { fillColor: [34, 139, 34], fontSize: 7 },
-    styles: { fontSize: 7, cellPadding: 2 },
-    margin: { left: 14, right: 14, bottom: 35 },
-  });
-
-  return (doc as any).lastAutoTable.finalY + 5;
-}
-
 // ══════════════════════════════════════════════
 // PUBLIC EXPORT FUNCTIONS
 // ══════════════════════════════════════════════
 
-/** Relatório Diário */
-export function exportDailyReport(
+export async function exportDailyReport(
   trips: Trip[], vehicles: Vehicle[], drivers: Driver[], patients: Patient[], userName: string, date: string,
 ) {
   const filtered = trips.filter(t => t.date === date);
   if (!filtered.length) return false;
-  buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório Diário', subtitle: `Data: ${fmtDate(date)}`, userName });
+  await buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório Diário', subtitle: `Data: ${fmtDate(date)}`, userName });
   return true;
 }
 
-/** Relatório por Veículo */
-export function exportVehicleReport(
+export async function exportVehicleReport(
   trips: Trip[], vehicles: Vehicle[], drivers: Driver[], patients: Patient[], userName: string, vehicleId: string,
 ) {
   const filtered = trips.filter(t => t.vehicleId === vehicleId);
   if (!filtered.length) return false;
   const v = vehicles.find(x => x.id === vehicleId);
-  buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Veículo', subtitle: `${v?.type} ${v?.modelo} — Placa: ${v?.plate}`, userName });
+  await buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Veículo', subtitle: `${v?.type} ${v?.modelo} — Placa: ${v?.plate}`, userName });
   return true;
 }
 
-/** Relatório por Motorista */
-export function exportDriverReport(
+export async function exportDriverReport(
   trips: Trip[], vehicles: Vehicle[], drivers: Driver[], patients: Patient[], userName: string, driverId: string,
 ) {
   const filtered = trips.filter(t => t.driverId === driverId);
   if (!filtered.length) return false;
   const d = drivers.find(x => x.id === driverId);
-  buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Motorista', subtitle: `Motorista: ${d?.name} — CNH: ${d?.cnh}`, userName });
+  await buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Motorista', subtitle: `Motorista: ${d?.name} — CNH: ${d?.cnh}`, userName });
   return true;
 }
 
-/** Relatório por Paciente */
-export function exportPatientReport(
+export async function exportPatientReport(
   trips: Trip[], vehicles: Vehicle[], drivers: Driver[], patients: Patient[], userName: string, patientId: string,
 ) {
   const filtered = trips.filter(t => t.passengers.some(p => p.patientId === patientId));
   if (!filtered.length) return false;
   const pat = patients.find(x => x.id === patientId);
-  buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Paciente', subtitle: `Paciente: ${pat?.name} — CPF: ${pat?.cpf}`, userName });
+  await buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Paciente', subtitle: `Paciente: ${pat?.name} — CPF: ${pat?.cpf}`, userName });
   return true;
 }
 
-/** Relatório por Período */
-export function exportPeriodReport(
+export async function exportPeriodReport(
   trips: Trip[], vehicles: Vehicle[], drivers: Driver[], patients: Patient[], userName: string, dateFrom: string, dateTo: string,
 ) {
   const filtered = trips.filter(t => t.date >= dateFrom && t.date <= dateTo);
   if (!filtered.length) return false;
-  buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Período', subtitle: `Período: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)}`, userName });
+  await buildDoc({ trips: filtered, vehicles, drivers, patients, title: 'Relatório por Período', subtitle: `Período: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)}`, userName });
   return true;
 }
 
-/** Relatório Gerencial Consolidado */
-export function exportConsolidatedReport(
+export async function exportConsolidatedReport(
   trips: Trip[], vehicles: Vehicle[], drivers: Driver[], patients: Patient[], userName: string, dateFrom: string, dateTo: string,
 ) {
   const filtered = trips.filter(t => t.date >= dateFrom && t.date <= dateTo);
@@ -253,12 +255,12 @@ export function exportConsolidatedReport(
   const code = genCode();
   const doc = new jsPDF({ orientation: 'landscape' });
   const w = doc.internal.pageSize.getWidth();
+  const logo = await getLogoBase64();
 
-  addHeader(doc, 'Relatório Gerencial Consolidado', `Período: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)}`, code, userName);
+  addHeader(doc, 'Relatório Gerencial Consolidado', `Período: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)}`, code, userName, logo);
 
   let y = 50;
 
-  // Summary cards
   const totalTrips = filtered.length;
   const confirmedTrips = filtered.filter(t => t.status === 'Confirmada').length;
   const concludedTrips = filtered.filter(t => t.status === 'Concluída').length;
@@ -266,7 +268,6 @@ export function exportConsolidatedReport(
   const totalPax = filtered.reduce((s, t) => s + t.passengers.length, 0);
   const totalAcomp = filtered.reduce((s, t) => s + t.passengers.filter(p => p.hasCompanion).length, 0);
 
-  // Stats table
   autoTable(doc, {
     startY: y,
     head: [['Indicador', 'Valor']],
@@ -287,7 +288,6 @@ export function exportConsolidatedReport(
     margin: { left: 14, right: w / 2 + 10, bottom: 35 },
   });
 
-  // Trips by vehicle
   const byVehicle = new Map<string, number>();
   filtered.forEach(t => {
     const v = vehicles.find(x => x.id === t.vehicleId);
@@ -305,7 +305,6 @@ export function exportConsolidatedReport(
     margin: { left: 14, right: 14, bottom: 35 },
   });
 
-  // Trips by driver
   const byDriver = new Map<string, number>();
   filtered.forEach(t => {
     const d = drivers.find(x => x.id === t.driverId);
@@ -323,7 +322,6 @@ export function exportConsolidatedReport(
     margin: { left: 14, right: 14, bottom: 35 },
   });
 
-  // Footers
   const totalPages = doc.getNumberOfPages();
   const totalsStr = `Total: ${totalTrips} viagens | ${totalPax} pacientes | ${totalAcomp} acompanhantes`;
   for (let i = 1; i <= totalPages; i++) {
@@ -336,6 +334,6 @@ export function exportConsolidatedReport(
 }
 
 // Legacy compat
-export function exportTripsPDF(trips: Trip[], title: string) {
-  buildDoc({ trips, vehicles: [], drivers: [], patients: [], title, subtitle: '', userName: 'Sistema' });
+export async function exportTripsPDF(trips: Trip[], title: string) {
+  await buildDoc({ trips, vehicles: [], drivers: [], patients: [], title, subtitle: '', userName: 'Sistema' });
 }

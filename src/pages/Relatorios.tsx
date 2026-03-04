@@ -39,31 +39,31 @@ const Relatorios = () => {
 
   const noData = () => toast({ title: 'Sem dados', description: 'Nenhuma viagem encontrada para os filtros selecionados.', variant: 'destructive' });
 
-  const handleDaily = () => {
-    if (!exportDailyReport(trips, vehicles, drivers, patients, userName, dailyDate)) noData();
+  const handleDaily = async () => {
+    if (!await exportDailyReport(trips, vehicles, drivers, patients, userName, dailyDate)) noData();
   };
 
-  const handleVehicle = () => {
+  const handleVehicle = async () => {
     if (vehicleId === 'all') { toast({ title: 'Selecione um veículo', variant: 'destructive' }); return; }
-    if (!exportVehicleReport(trips, vehicles, drivers, patients, userName, vehicleId)) noData();
+    if (!await exportVehicleReport(trips, vehicles, drivers, patients, userName, vehicleId)) noData();
   };
 
-  const handleDriver = () => {
+  const handleDriver = async () => {
     if (driverId === 'all') { toast({ title: 'Selecione um motorista', variant: 'destructive' }); return; }
-    if (!exportDriverReport(trips, vehicles, drivers, patients, userName, driverId)) noData();
+    if (!await exportDriverReport(trips, vehicles, drivers, patients, userName, driverId)) noData();
   };
 
-  const handlePatient = () => {
+  const handlePatient = async () => {
     if (patientId === 'all') { toast({ title: 'Selecione um paciente', variant: 'destructive' }); return; }
-    if (!exportPatientReport(trips, vehicles, drivers, patients, userName, patientId)) noData();
+    if (!await exportPatientReport(trips, vehicles, drivers, patients, userName, patientId)) noData();
   };
 
-  const handlePeriod = () => {
-    if (!exportPeriodReport(trips, vehicles, drivers, patients, userName, periodFrom, periodTo)) noData();
+  const handlePeriod = async () => {
+    if (!await exportPeriodReport(trips, vehicles, drivers, patients, userName, periodFrom, periodTo)) noData();
   };
 
-  const handleConsolidated = () => {
-    if (!exportConsolidatedReport(trips, vehicles, drivers, patients, userName, consolFrom, consolTo)) noData();
+  const handleConsolidated = async () => {
+    if (!await exportConsolidatedReport(trips, vehicles, drivers, patients, userName, consolFrom, consolTo)) noData();
   };
 
   return (
