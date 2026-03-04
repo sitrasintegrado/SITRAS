@@ -208,26 +208,38 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          ano: number | null
           capacity: number
+          chassi: string
           created_at: string
           id: string
+          modelo: string
           plate: string
+          renavam: string
           status: Database["public"]["Enums"]["vehicle_status"]
           type: Database["public"]["Enums"]["vehicle_type"]
         }
         Insert: {
+          ano?: number | null
           capacity?: number
+          chassi?: string
           created_at?: string
           id?: string
+          modelo?: string
           plate?: string
+          renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]
           type?: Database["public"]["Enums"]["vehicle_type"]
         }
         Update: {
+          ano?: number | null
           capacity?: number
+          chassi?: string
           created_at?: string
           id?: string
+          modelo?: string
           plate?: string
+          renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]
           type?: Database["public"]["Enums"]["vehicle_type"]
         }

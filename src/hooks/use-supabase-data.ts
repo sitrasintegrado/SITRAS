@@ -41,19 +41,30 @@ export function useVehicles() {
 
   const fetch = useCallback(async () => {
     const { data } = await supabase.from('vehicles').select('*').order('plate');
-    if (data) setVehicles(data.map(r => ({ id: r.id, type: r.type as Vehicle['type'], plate: r.plate, capacity: r.capacity, status: r.status as Vehicle['status'] })));
+    if (data) setVehicles(data.map(r => ({
+      id: r.id, type: r.type as Vehicle['type'], plate: r.plate,
+      modelo: (r as any).modelo || '', ano: (r as any).ano || null,
+      renavam: (r as any).renavam || '', chassi: (r as any).chassi || '',
+      capacity: r.capacity, status: r.status as Vehicle['status'],
+    })));
     setLoading(false);
   }, []);
 
   useEffect(() => { fetch(); }, [fetch]);
 
   const save = async (v: Omit<Vehicle, 'id'>) => {
-    await supabase.from('vehicles').insert({ type: v.type, plate: v.plate, capacity: v.capacity, status: v.status });
+    await supabase.from('vehicles').insert({
+      type: v.type, plate: v.plate, capacity: v.capacity, status: v.status,
+      modelo: v.modelo, ano: v.ano, renavam: v.renavam, chassi: v.chassi,
+    } as any);
     await fetch();
   };
 
   const update = async (id: string, v: Omit<Vehicle, 'id'>) => {
-    await supabase.from('vehicles').update({ type: v.type, plate: v.plate, capacity: v.capacity, status: v.status }).eq('id', id);
+    await supabase.from('vehicles').update({
+      type: v.type, plate: v.plate, capacity: v.capacity, status: v.status,
+      modelo: v.modelo, ano: v.ano, renavam: v.renavam, chassi: v.chassi,
+    } as any).eq('id', id);
     await fetch();
   };
 

@@ -11,6 +11,10 @@ export interface Vehicle {
   id: string;
   type: 'Carro' | 'Van' | 'Ônibus';
   plate: string;
+  modelo: string;
+  ano: number | null;
+  renavam: string;
+  chassi: string;
   capacity: number;
   status: 'Ativo' | 'Manutenção' | 'Inativo';
 }
