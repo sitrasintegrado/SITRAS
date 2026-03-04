@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { getTrips, getVehicles, getDrivers, getPatients } from '@/lib/store';
+import { useTrips, useVehicles, useDrivers, usePatients } from '@/hooks/use-supabase-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarDays, Car, Users, UserCog, AlertTriangle } from 'lucide-react';
 
 const Dashboard = () => {
-  const trips = getTrips();
-  const vehicles = getVehicles();
-  const drivers = getDrivers();
-  const patients = getPatients();
+  const { trips } = useTrips();
+  const { vehicles } = useVehicles();
+  const { drivers } = useDrivers();
+  const { patients } = usePatients();
 
   const today = new Date().toISOString().split('T')[0];
   const [dateFilter, setDateFilter] = useState(today);
@@ -46,7 +46,6 @@ const Dashboard = () => {
         <p className="text-muted-foreground text-sm">Visão geral das viagens do dia</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
@@ -74,7 +73,6 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44" />
         <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
@@ -93,7 +91,6 @@ const Dashboard = () => {
         </Select>
       </div>
 
-      {/* Trips */}
       {filtered.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem encontrada para os filtros selecionados.</CardContent></Card>
       ) : (

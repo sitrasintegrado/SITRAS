@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Trip, TripPassenger } from '@/types';
-import { getTrips, saveTrips, getVehicles, getDrivers, getPatients, generateId } from '@/lib/store';
+import { useTrips, useVehicles, useDrivers, usePatients } from '@/hooks/use-supabase-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,10 +27,10 @@ const emptyTrip: Omit<Trip, 'id'> = {
 
 const Agendamentos = () => {
   const { toast } = useToast();
-  const [trips, setTrips] = useState(getTrips());
-  const vehicles = getVehicles();
-  const drivers = getDrivers();
-  const patients = getPatients();
+  const { trips, save, update, remove } = useTrips();
+  const { vehicles } = useVehicles();
+  const { drivers } = useDrivers();
+  const { patients } = usePatients();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -55,27 +55,22 @@ const Agendamentos = () => {
   const openNew = () => { setEditId(null); setForm(emptyTrip); setDialogOpen(true); };
   const openEdit = (t: Trip) => { setEditId(t.id); setForm({ ...t }); setDialogOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.destination || !form.vehicleId || !form.driverId) {
       toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' });
       return;
     }
-    let updated: Trip[];
     if (editId) {
-      updated = trips.map(t => t.id === editId ? { ...form, id: editId } : t);
+      await update(editId, form);
     } else {
-      updated = [...trips, { ...form, id: generateId() }];
+      await save(form);
     }
-    saveTrips(updated);
-    setTrips(updated);
     setDialogOpen(false);
     toast({ title: editId ? 'Viagem atualizada' : 'Viagem criada' });
   };
 
-  const handleDelete = (id: string) => {
-    const updated = trips.filter(t => t.id !== id);
-    saveTrips(updated);
-    setTrips(updated);
+  const handleDelete = async (id: string) => {
+    await remove(id);
     toast({ title: 'Viagem excluída' });
   };
 
@@ -84,10 +79,7 @@ const Agendamentos = () => {
     if (exists) {
       setForm({ ...form, passengers: form.passengers.filter(p => p.patientId !== patientId) });
     } else {
-      if (available <= 0) {
-        toast({ title: 'Veículo lotado!', variant: 'destructive' });
-        return;
-      }
+      if (available <= 0) { toast({ title: 'Veículo lotado!', variant: 'destructive' }); return; }
       setForm({ ...form, passengers: [...form.passengers, { patientId, hasCompanion: false }] });
     }
   };
@@ -95,10 +87,7 @@ const Agendamentos = () => {
   const toggleCompanion = (patientId: string) => {
     const passenger = form.passengers.find(p => p.patientId === patientId);
     if (!passenger) return;
-    if (!passenger.hasCompanion && available <= 0) {
-      toast({ title: 'Sem vagas para acompanhante', variant: 'destructive' });
-      return;
-    }
+    if (!passenger.hasCompanion && available <= 0) { toast({ title: 'Sem vagas para acompanhante', variant: 'destructive' }); return; }
     setForm({
       ...form,
       passengers: form.passengers.map(p =>

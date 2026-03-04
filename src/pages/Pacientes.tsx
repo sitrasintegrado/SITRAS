@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Patient } from '@/types';
-import { getPatients, savePatients, getTrips, generateId } from '@/lib/store';
+import { usePatients } from '@/hooks/use-supabase-data';
+import { useTrips } from '@/hooks/use-supabase-data';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,8 @@ const emptyPatient: Omit<Patient, 'id'> = { name: '', cpf: '', phone: '', addres
 
 const Pacientes = () => {
   const { toast } = useToast();
-  const [patients, setPatients] = useState(getPatients());
+  const { patients, save, update, remove } = usePatients();
+  const { trips } = useTrips();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyPatient, setHistoryPatient] = useState<Patient | null>(null);
@@ -31,33 +33,23 @@ const Pacientes = () => {
   const openNew = () => { setEditId(null); setForm(emptyPatient); setDialogOpen(true); };
   const openEdit = (p: Patient) => { setEditId(p.id); setForm(p); setDialogOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.cpf) { toast({ title: 'Preencha nome e CPF', variant: 'destructive' }); return; }
-    let updated: Patient[];
     if (editId) {
-      updated = patients.map(p => p.id === editId ? { ...form, id: editId } : p);
+      await update(editId, form);
     } else {
-      updated = [...patients, { ...form, id: generateId() }];
+      await save(form);
     }
-    savePatients(updated);
-    setPatients(updated);
     setDialogOpen(false);
     toast({ title: editId ? 'Paciente atualizado' : 'Paciente cadastrado' });
   };
 
-  const handleDelete = (id: string) => {
-    const updated = patients.filter(p => p.id !== id);
-    savePatients(updated);
-    setPatients(updated);
+  const handleDelete = async (id: string) => {
+    await remove(id);
     toast({ title: 'Paciente excluído' });
   };
 
-  const showHistory = (p: Patient) => {
-    setHistoryPatient(p);
-    setHistoryOpen(true);
-  };
-
-  const trips = getTrips();
+  const showHistory = (p: Patient) => { setHistoryPatient(p); setHistoryOpen(true); };
   const patientTrips = historyPatient ? trips.filter(t => t.passengers.some(p => p.patientId === historyPatient.id)) : [];
 
   return (

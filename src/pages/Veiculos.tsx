@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Vehicle } from '@/types';
-import { getVehicles, saveVehicles, generateId } from '@/lib/store';
+import { useVehicles } from '@/hooks/use-supabase-data';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ const emptyVehicle: Omit<Vehicle, 'id'> = { type: 'Van', plate: '', capacity: 10
 
 const Veiculos = () => {
   const { toast } = useToast();
-  const [vehicles, setVehicles] = useState(getVehicles());
+  const { vehicles, save, update, remove } = useVehicles();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyVehicle);
@@ -27,24 +27,19 @@ const Veiculos = () => {
   const openNew = () => { setEditId(null); setForm(emptyVehicle); setDialogOpen(true); };
   const openEdit = (v: Vehicle) => { setEditId(v.id); setForm(v); setDialogOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.plate) { toast({ title: 'Preencha a placa', variant: 'destructive' }); return; }
-    let updated: Vehicle[];
     if (editId) {
-      updated = vehicles.map(v => v.id === editId ? { ...form, id: editId } : v);
+      await update(editId, form);
     } else {
-      updated = [...vehicles, { ...form, id: generateId() }];
+      await save(form);
     }
-    saveVehicles(updated);
-    setVehicles(updated);
     setDialogOpen(false);
     toast({ title: editId ? 'Veículo atualizado' : 'Veículo cadastrado' });
   };
 
-  const handleDelete = (id: string) => {
-    const updated = vehicles.filter(v => v.id !== id);
-    saveVehicles(updated);
-    setVehicles(updated);
+  const handleDelete = async (id: string) => {
+    await remove(id);
     toast({ title: 'Veículo excluído' });
   };
 
