@@ -10,11 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const emptyDriver: Omit<Driver, 'id'> = { name: '', phone: '', cnh: '', cnhCategory: 'D', cnhExpiry: '' };
 
 const Motoristas = () => {
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = useAuth();
   const { drivers, save, update, remove } = useDrivers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -54,7 +56,7 @@ const Motoristas = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h1 className="text-2xl font-bold">Motoristas</h1><p className="text-sm text-muted-foreground">Gestão dos motoristas</p></div>
-        <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Novo Motorista</Button>
+        {canCreate && <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Novo Motorista</Button>}
       </div>
 
       <Card>
@@ -76,8 +78,8 @@ const Motoristas = () => {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{d.phone}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(d.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    {canEdit && <Button size="icon" variant="ghost" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>}
+                    {canDelete && <Button size="icon" variant="ghost" onClick={() => handleDelete(d.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
                 </TableRow>
               ))}

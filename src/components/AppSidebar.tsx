@@ -1,25 +1,28 @@
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText, ShieldCheck } from 'lucide-react';
 import logo from '@/assets/logo.png';
-
-const items = [
-  { title: 'Painel', url: '/', icon: LayoutDashboard },
-  { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
-  { title: 'Pacientes', url: '/pacientes', icon: Users },
-  { title: 'Veículos', url: '/veiculos', icon: Car },
-  { title: 'Motoristas', url: '/motoristas', icon: UserCog },
-  { title: 'Relatórios', url: '/relatorios', icon: FileText },
-];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const { canManageUsers } = useAuth();
+
+  const items = [
+    { title: 'Painel', url: '/', icon: LayoutDashboard },
+    { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
+    { title: 'Pacientes', url: '/pacientes', icon: Users },
+    { title: 'Veículos', url: '/veiculos', icon: Car },
+    { title: 'Motoristas', url: '/motoristas', icon: UserCog },
+    { title: 'Relatórios', url: '/relatorios', icon: FileText },
+    ...(canManageUsers ? [{ title: 'Usuários', url: '/usuarios', icon: ShieldCheck }] : []),
+  ];
 
   return (
     <Sidebar collapsible="icon">

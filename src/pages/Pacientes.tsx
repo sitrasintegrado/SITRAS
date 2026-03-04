@@ -12,11 +12,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Search, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const emptyPatient: Omit<Patient, 'id'> = { name: '', cpf: '', phone: '', address: '', notes: '' };
 
 const Pacientes = () => {
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = useAuth();
   const { patients, save, update, remove } = usePatients();
   const { trips } = useTrips();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -56,7 +58,7 @@ const Pacientes = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h1 className="text-2xl font-bold">Pacientes</h1><p className="text-sm text-muted-foreground">Cadastro e gestão de pacientes</p></div>
-        <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Novo Paciente</Button>
+        {canCreate && <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Novo Paciente</Button>}
       </div>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -81,8 +83,8 @@ const Pacientes = () => {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" onClick={() => showHistory(p)}><History className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      {canEdit && <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>}
+                      {canDelete && <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                   </TableCell>
                 </TableRow>
