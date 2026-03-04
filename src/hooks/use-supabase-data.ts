@@ -46,6 +46,9 @@ export function useVehicles() {
       modelo: (r as any).modelo || '', ano: (r as any).ano || null,
       renavam: (r as any).renavam || '', chassi: (r as any).chassi || '',
       capacity: r.capacity, status: r.status as Vehicle['status'],
+      lastMaintenance: (r as any).last_maintenance || '',
+      nextReview: (r as any).next_review || '',
+      oilChangeKm: (r as any).oil_change_km || null,
     })));
     setLoading(false);
   }, []);
@@ -56,6 +59,7 @@ export function useVehicles() {
     await supabase.from('vehicles').insert({
       type: v.type, plate: v.plate, capacity: v.capacity, status: v.status,
       modelo: v.modelo, ano: v.ano, renavam: v.renavam, chassi: v.chassi,
+      last_maintenance: v.lastMaintenance || null, next_review: v.nextReview || null, oil_change_km: v.oilChangeKm,
     } as any);
     await fetch();
   };
@@ -64,6 +68,7 @@ export function useVehicles() {
     await supabase.from('vehicles').update({
       type: v.type, plate: v.plate, capacity: v.capacity, status: v.status,
       modelo: v.modelo, ano: v.ano, renavam: v.renavam, chassi: v.chassi,
+      last_maintenance: v.lastMaintenance || null, next_review: v.nextReview || null, oil_change_km: v.oilChangeKm,
     } as any).eq('id', id);
     await fetch();
   };
