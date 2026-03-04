@@ -5,6 +5,7 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const items = [
   { title: 'Painel', url: '/', icon: LayoutDashboard },
@@ -24,9 +25,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <div className="p-4 flex items-center gap-2">
-          <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold text-sm shrink-0">
-            ST
-          </div>
+          <img src={logo} alt="SITRAS Logo" className="h-9 w-9 rounded-lg shrink-0 object-contain" />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-bold text-sm text-sidebar-foreground leading-tight">SITRAS</span>
