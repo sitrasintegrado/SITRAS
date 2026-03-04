@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, Car, Users, UserCog, AlertTriangle } from 'lucide-react';
+import { CalendarDays, Car, Users, UserCog, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { differenceInDays, parseISO } from 'date-fns';
 
 const Dashboard = () => {
   const { trips } = useTrips();
@@ -72,6 +73,70 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* CNH Alerts */}
+      {(() => {
+        const now = new Date();
+        const cnhAlerts = drivers
+          .filter(d => d.cnhExpiry)
+          .map(d => {
+            const expiry = parseISO(d.cnhExpiry);
+            const daysLeft = differenceInDays(expiry, now);
+            const status: 'valid' | 'warning' | 'expired' =
+              daysLeft < 0 ? 'expired' : daysLeft <= 30 ? 'warning' : 'valid';
+            return { ...d, daysLeft, status };
+          })
+          .filter(d => d.status !== 'valid')
+          .sort((a, b) => a.daysLeft - b.daysLeft);
+
+        if (cnhAlerts.length === 0) return null;
+
+        return (
+          <Card className="border-warning/50 bg-warning/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-warning" />
+                🚨 CNHs Próximas do Vencimento
+                <Badge variant="outline" className="ml-auto text-xs">{cnhAlerts.length} alerta{cnhAlerts.length > 1 ? 's' : ''}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="pb-2 font-medium">Motorista</th>
+                      <th className="pb-2 font-medium">Categoria</th>
+                      <th className="pb-2 font-medium">Vencimento</th>
+                      <th className="pb-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cnhAlerts.map(d => (
+                      <tr key={d.id} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 font-medium">{d.name}</td>
+                        <td className="py-2">{d.cnhCategory}</td>
+                        <td className="py-2">{new Date(d.cnhExpiry).toLocaleDateString('pt-BR')}</td>
+                        <td className="py-2">
+                          {d.status === 'expired' ? (
+                            <Badge className="bg-destructive text-destructive-foreground text-xs">
+                              🔴 Vencida ({Math.abs(d.daysLeft)} dias)
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-warning text-warning-foreground text-xs">
+                              🟡 {d.daysLeft} dias restantes
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <div className="flex flex-wrap gap-3">
         <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44" />
