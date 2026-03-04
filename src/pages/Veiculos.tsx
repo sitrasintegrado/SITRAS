@@ -11,11 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const emptyVehicle: Omit<Vehicle, 'id'> = { type: 'Van', plate: '', capacity: 10, status: 'Ativo' };
 
 const Veiculos = () => {
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = useAuth();
   const { vehicles, save, update, remove } = useVehicles();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -53,7 +55,7 @@ const Veiculos = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h1 className="text-2xl font-bold">Veículos</h1><p className="text-sm text-muted-foreground">Gestão da frota de transporte</p></div>
-        <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Novo Veículo</Button>
+        {canCreate && <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Novo Veículo</Button>}
       </div>
       <Select value={statusFilter} onValueChange={setStatusFilter}>
         <SelectTrigger className="w-44"><SelectValue placeholder="Situação" /></SelectTrigger>
@@ -77,8 +79,8 @@ const Veiculos = () => {
                   <TableCell>{v.capacity}</TableCell>
                   <TableCell>{statusBadge(v.status)}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(v)}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(v.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    {canEdit && <Button size="icon" variant="ghost" onClick={() => openEdit(v)}><Pencil className="h-4 w-4" /></Button>}
+                    {canDelete && <Button size="icon" variant="ghost" onClick={() => handleDelete(v.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
                 </TableRow>
               ))}

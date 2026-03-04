@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const emptyTrip: Omit<Trip, 'id'> = {
   date: new Date().toISOString().split('T')[0],
@@ -27,6 +28,7 @@ const emptyTrip: Omit<Trip, 'id'> = {
 
 const Agendamentos = () => {
   const { toast } = useToast();
+  const { canCreate, canEdit, canDelete } = useAuth();
   const { trips, save, update, remove } = useTrips();
   const { vehicles } = useVehicles();
   const { drivers } = useDrivers();
@@ -109,7 +111,7 @@ const Agendamentos = () => {
           <h1 className="text-2xl font-bold">Agendamentos</h1>
           <p className="text-sm text-muted-foreground">Gerencie as viagens de transporte</p>
         </div>
-        <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Nova Viagem</Button>
+        {canCreate && <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Nova Viagem</Button>}
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -149,8 +151,8 @@ const Agendamentos = () => {
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge className={statusColor(trip.status)}>{trip.status}</Badge>
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(trip)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(trip.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      {canEdit && <Button size="icon" variant="ghost" onClick={() => openEdit(trip)}><Pencil className="h-4 w-4" /></Button>}
+                      {canDelete && <Button size="icon" variant="ghost" onClick={() => handleDelete(trip.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                     </div>
                   </div>
                 </CardHeader>
