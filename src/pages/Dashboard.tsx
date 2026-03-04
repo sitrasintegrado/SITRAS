@@ -1,0 +1,147 @@
+import { useState, useMemo } from 'react';
+import { getTrips, getVehicles, getDrivers, getPatients } from '@/lib/store';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarDays, Car, Users, UserCog, AlertTriangle } from 'lucide-react';
+
+const Dashboard = () => {
+  const trips = getTrips();
+  const vehicles = getVehicles();
+  const drivers = getDrivers();
+  const patients = getPatients();
+
+  const today = new Date().toISOString().split('T')[0];
+  const [dateFilter, setDateFilter] = useState(today);
+  const [vehicleFilter, setVehicleFilter] = useState('all');
+  const [driverFilter, setDriverFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    return trips.filter(t => {
+      if (dateFilter && t.date !== dateFilter) return false;
+      if (vehicleFilter !== 'all' && t.vehicleId !== vehicleFilter) return false;
+      if (driverFilter !== 'all' && t.driverId !== driverFilter) return false;
+      return true;
+    });
+  }, [trips, dateFilter, vehicleFilter, driverFilter]);
+
+  const stats = useMemo(() => {
+    const todayTrips = trips.filter(t => t.date === today);
+    const totalPassengers = todayTrips.reduce((s, t) => s + t.passengers.length, 0);
+    const confirmed = todayTrips.filter(t => t.status === 'Confirmada').length;
+    return { total: todayTrips.length, passengers: totalPassengers, confirmed };
+  }, [trips, today]);
+
+  const statusColor = (s: string) => {
+    if (s === 'Confirmada') return 'bg-secondary text-secondary-foreground';
+    if (s === 'Cancelada') return 'bg-destructive text-destructive-foreground';
+    return 'bg-muted text-muted-foreground';
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Painel de Controle</h1>
+        <p className="text-muted-foreground text-sm">Visão geral das viagens do dia</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><CalendarDays className="h-5 w-5 text-primary" /></div>
+            <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Viagens hoje</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center"><Users className="h-5 w-5 text-secondary" /></div>
+            <div><p className="text-2xl font-bold">{stats.passengers}</p><p className="text-xs text-muted-foreground">Pacientes</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><Car className="h-5 w-5 text-primary" /></div>
+            <div><p className="text-2xl font-bold">{vehicles.filter(v => v.status === 'Ativo').length}</p><p className="text-xs text-muted-foreground">Veículos ativos</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-secondary" /></div>
+            <div><p className="text-2xl font-bold">{drivers.length}</p><p className="text-xs text-muted-foreground">Motoristas</p></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44" />
+        <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Veículo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos veículos</SelectItem>
+            {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={driverFilter} onValueChange={setDriverFilter}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Motorista" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos motoristas</SelectItem>
+            {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Trips */}
+      {filtered.length === 0 ? (
+        <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem encontrada para os filtros selecionados.</CardContent></Card>
+      ) : (
+        <div className="grid gap-4">
+          {filtered.map(trip => {
+            const vehicle = vehicles.find(v => v.id === trip.vehicleId);
+            const driver = drivers.find(d => d.id === trip.driverId);
+            const totalSeats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
+            const isFull = vehicle ? totalSeats >= vehicle.capacity : false;
+
+            return (
+              <Card key={trip.id} className={isFull ? 'border-destructive/50 bg-destructive/5' : ''}>
+                <CardHeader className="pb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      {trip.departureTime} — {trip.destination}
+                      {isFull && <AlertTriangle className="h-4 w-4 text-destructive" />}
+                    </CardTitle>
+                    <Badge className={statusColor(trip.status)}>{trip.status}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div><span className="text-muted-foreground">Veículo:</span> <span className="font-medium">{vehicle?.type} {vehicle?.plate}</span></div>
+                    <div><span className="text-muted-foreground">Capacidade:</span> <span className="font-medium">{totalSeats}/{vehicle?.capacity || '?'}</span></div>
+                    <div><span className="text-muted-foreground">Motorista:</span> <span className="font-medium">{driver?.name || '—'}</span></div>
+                    <div><span className="text-muted-foreground">Local:</span> <span className="font-medium">{trip.consultLocation}</span></div>
+                  </div>
+                  {trip.passengers.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {trip.passengers.map(p => {
+                        const pat = patients.find(pt => pt.id === p.patientId);
+                        return (
+                          <Badge key={p.patientId} variant="outline" className="text-xs">
+                            {pat?.name || '—'}{p.hasCompanion ? ' +Acomp.' : ''}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Dashboard;
