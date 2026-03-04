@@ -4,8 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, Car, Users, UserCog, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { differenceInDays, parseISO } from 'date-fns';
+import {
+  CalendarDays, Car, Users, UserCog, AlertTriangle, ShieldAlert,
+  TrendingUp, Clock, MapPin, Filter, ChevronRight
+} from 'lucide-react';
+import { differenceInDays, parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Dashboard = () => {
   const { trips } = useTrips();
@@ -31,177 +35,293 @@ const Dashboard = () => {
     const todayTrips = trips.filter(t => t.date === today);
     const totalPassengers = todayTrips.reduce((s, t) => s + t.passengers.length, 0);
     const confirmed = todayTrips.filter(t => t.status === 'Confirmada').length;
-    return { total: todayTrips.length, passengers: totalPassengers, confirmed };
+    const concluded = todayTrips.filter(t => t.status === 'Concluída').length;
+    const cancelled = todayTrips.filter(t => t.status === 'Cancelada').length;
+    return { total: todayTrips.length, passengers: totalPassengers, confirmed, concluded, cancelled };
   }, [trips, today]);
 
-  const statusColor = (s: string) => {
-    if (s === 'Confirmada') return 'bg-secondary text-secondary-foreground';
-    if (s === 'Cancelada') return 'bg-destructive text-destructive-foreground';
-    return 'bg-muted text-muted-foreground';
+  const cnhAlerts = useMemo(() => {
+    const now = new Date();
+    return drivers
+      .filter(d => d.cnhExpiry)
+      .map(d => {
+        const expiry = parseISO(d.cnhExpiry);
+        const daysLeft = differenceInDays(expiry, now);
+        const status: 'valid' | 'warning' | 'expired' =
+          daysLeft < 0 ? 'expired' : daysLeft <= 30 ? 'warning' : 'valid';
+        return { ...d, daysLeft, status };
+      })
+      .filter(d => d.status !== 'valid')
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [drivers]);
+
+  const statusConfig = (s: string) => {
+    if (s === 'Confirmada') return { bg: 'bg-info/10 text-info border-info/20', dot: 'bg-info' };
+    if (s === 'Concluída') return { bg: 'bg-secondary/10 text-secondary border-secondary/20', dot: 'bg-secondary' };
+    if (s === 'Cancelada') return { bg: 'bg-destructive/10 text-destructive border-destructive/20', dot: 'bg-destructive' };
+    return { bg: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' };
   };
+
+  const formattedDate = useMemo(() => {
+    try {
+      return format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch {
+      return today;
+    }
+  }, [today]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Painel de Controle</h1>
-        <p className="text-muted-foreground text-sm">Visão geral das viagens do dia</p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Painel de Controle</h1>
+          <p className="text-muted-foreground text-sm capitalize">{formattedDate}</p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="h-2 w-2 rounded-full bg-secondary animate-pulse" />
+          Dados atualizados em tempo real
+        </div>
       </div>
 
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><CalendarDays className="h-5 w-5 text-primary" /></div>
-            <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Viagens hoje</p></div>
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-[4rem]" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <CalendarDays className="h-6 w-6 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{stats.total}</p>
+              <p className="text-xs text-muted-foreground font-medium">Viagens hoje</p>
+              {stats.confirmed > 0 && (
+                <p className="text-[10px] text-info mt-0.5">{stats.confirmed} confirmada{stats.confirmed > 1 ? 's' : ''}</p>
+              )}
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center"><Users className="h-5 w-5 text-secondary" /></div>
-            <div><p className="text-2xl font-bold">{stats.passengers}</p><p className="text-xs text-muted-foreground">Pacientes</p></div>
+
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-secondary/5 rounded-bl-[4rem]" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
+              <Users className="h-6 w-6 text-secondary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{stats.passengers}</p>
+              <p className="text-xs text-muted-foreground font-medium">Pacientes hoje</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{patients.length} cadastrados</p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><Car className="h-5 w-5 text-primary" /></div>
-            <div><p className="text-2xl font-bold">{vehicles.filter(v => v.status === 'Ativo').length}</p><p className="text-xs text-muted-foreground">Veículos ativos</p></div>
+
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-[4rem]" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Car className="h-6 w-6 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{vehicles.filter(v => v.status === 'Ativo').length}</p>
+              <p className="text-xs text-muted-foreground font-medium">Veículos ativos</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{vehicles.length} na frota</p>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-secondary" /></div>
-            <div><p className="text-2xl font-bold">{drivers.length}</p><p className="text-xs text-muted-foreground">Motoristas</p></div>
+
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-secondary/5 rounded-bl-[4rem]" />
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
+              <UserCog className="h-6 w-6 text-secondary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{drivers.length}</p>
+              <p className="text-xs text-muted-foreground font-medium">Motoristas</p>
+              {cnhAlerts.length > 0 && (
+                <p className="text-[10px] text-warning mt-0.5">{cnhAlerts.length} alerta{cnhAlerts.length > 1 ? 's' : ''} de CNH</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* CNH Alerts */}
-      {(() => {
-        const now = new Date();
-        const cnhAlerts = drivers
-          .filter(d => d.cnhExpiry)
-          .map(d => {
-            const expiry = parseISO(d.cnhExpiry);
-            const daysLeft = differenceInDays(expiry, now);
-            const status: 'valid' | 'warning' | 'expired' =
-              daysLeft < 0 ? 'expired' : daysLeft <= 30 ? 'warning' : 'valid';
-            return { ...d, daysLeft, status };
-          })
-          .filter(d => d.status !== 'valid')
-          .sort((a, b) => a.daysLeft - b.daysLeft);
+      {cnhAlerts.length > 0 && (
+        <Card className="border-warning/30 shadow-md overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-warning to-destructive" />
+          <CardHeader className="pb-3 pt-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-warning" />
+              Alertas de CNH
+              <Badge variant="outline" className="ml-auto text-[10px] border-warning/30 text-warning">
+                {cnhAlerts.length} alerta{cnhAlerts.length > 1 ? 's' : ''}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="space-y-2">
+              {cnhAlerts.map(d => (
+                <div key={d.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${d.status === 'expired' ? 'bg-destructive' : 'bg-warning'}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{d.name}</p>
+                      <p className="text-[11px] text-muted-foreground">Cat. {d.cnhCategory} • Venc. {new Date(d.cnhExpiry).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
+                  <Badge
+                    className={`text-[10px] shrink-0 ${d.status === 'expired' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-warning/10 text-warning border-warning/20'}`}
+                    variant="outline"
+                  >
+                    {d.status === 'expired' ? `Vencida há ${Math.abs(d.daysLeft)}d` : `${d.daysLeft}d restantes`}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        if (cnhAlerts.length === 0) return null;
+      {/* Filters */}
+      <Card className="border-0 shadow-md">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Filtros</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44 text-sm" />
+            <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+              <SelectTrigger className="w-48 text-sm"><SelectValue placeholder="Veículo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os veículos</SelectItem>
+                {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.modelo} — {v.plate}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={driverFilter} onValueChange={setDriverFilter}>
+              <SelectTrigger className="w-48 text-sm"><SelectValue placeholder="Motorista" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os motoristas</SelectItem>
+                {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-        return (
-          <Card className="border-warning/50 bg-warning/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-warning" />
-                🚨 CNHs Próximas do Vencimento
-                <Badge variant="outline" className="ml-auto text-xs">{cnhAlerts.length} alerta{cnhAlerts.length > 1 ? 's' : ''}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="pb-2 font-medium">Motorista</th>
-                      <th className="pb-2 font-medium">Categoria</th>
-                      <th className="pb-2 font-medium">Vencimento</th>
-                      <th className="pb-2 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cnhAlerts.map(d => (
-                      <tr key={d.id} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 font-medium">{d.name}</td>
-                        <td className="py-2">{d.cnhCategory}</td>
-                        <td className="py-2">{new Date(d.cnhExpiry).toLocaleDateString('pt-BR')}</td>
-                        <td className="py-2">
-                          {d.status === 'expired' ? (
-                            <Badge className="bg-destructive text-destructive-foreground text-xs">
-                              🔴 Vencida ({Math.abs(d.daysLeft)} dias)
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-warning text-warning-foreground text-xs">
-                              🟡 {d.daysLeft} dias restantes
-                            </Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+      {/* Trips */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            Viagens
+            <Badge variant="secondary" className="text-[10px]">{filtered.length}</Badge>
+          </h2>
+        </div>
+
+        {filtered.length === 0 ? (
+          <Card className="border-dashed border-2">
+            <CardContent className="p-12 text-center">
+              <CalendarDays className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">Nenhuma viagem encontrada</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">Ajuste os filtros ou selecione outra data</p>
             </CardContent>
           </Card>
-        );
-      })()}
+        ) : (
+          <div className="grid gap-3">
+            {filtered.map(trip => {
+              const vehicle = vehicles.find(v => v.id === trip.vehicleId);
+              const driver = drivers.find(d => d.id === trip.driverId);
+              const totalSeats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
+              const isFull = vehicle ? totalSeats >= vehicle.capacity : false;
+              const sc = statusConfig(trip.status);
+              const occupancy = vehicle ? Math.round((totalSeats / vehicle.capacity) * 100) : 0;
 
-      <div className="flex flex-wrap gap-3">
-        <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44" />
-        <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Veículo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos veículos</SelectItem>
-            {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={driverFilter} onValueChange={setDriverFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Motorista" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos motoristas</SelectItem>
-            {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
+              return (
+                <Card key={trip.id} className={`border-0 shadow-sm hover:shadow-md transition-shadow ${isFull ? 'ring-1 ring-destructive/30' : ''}`}>
+                  <CardContent className="p-0">
+                    <div className="flex items-stretch">
+                      {/* Left accent */}
+                      <div className={`w-1 shrink-0 rounded-l-lg ${sc.dot}`} />
 
-      {filtered.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem encontrada para os filtros selecionados.</CardContent></Card>
-      ) : (
-        <div className="grid gap-4">
-          {filtered.map(trip => {
-            const vehicle = vehicles.find(v => v.id === trip.vehicleId);
-            const driver = drivers.find(d => d.id === trip.driverId);
-            const totalSeats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
-            const isFull = vehicle ? totalSeats >= vehicle.capacity : false;
+                      <div className="flex-1 p-4">
+                        {/* Top row */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex flex-col items-center shrink-0">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground mb-0.5" />
+                              <span className="text-sm font-bold">{trip.departureTime || '—'}</span>
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <p className="text-sm font-semibold truncate">{trip.destination || 'Sem destino'}</p>
+                              </div>
+                              {trip.consultLocation && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5 ml-5.5 truncate">{trip.consultLocation}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isFull && <AlertTriangle className="h-4 w-4 text-destructive" />}
+                            <Badge variant="outline" className={`text-[10px] ${sc.bg}`}>{trip.status}</Badge>
+                          </div>
+                        </div>
 
-            return (
-              <Card key={trip.id} className={isFull ? 'border-destructive/50 bg-destructive/5' : ''}>
-                <CardHeader className="pb-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {trip.departureTime} — {trip.destination}
-                      {isFull && <AlertTriangle className="h-4 w-4 text-destructive" />}
-                    </CardTitle>
-                    <Badge className={statusColor(trip.status)}>{trip.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div><span className="text-muted-foreground">Veículo:</span> <span className="font-medium">{vehicle?.type} {vehicle?.plate}</span></div>
-                    <div><span className="text-muted-foreground">Capacidade:</span> <span className="font-medium">{totalSeats}/{vehicle?.capacity || '?'}</span></div>
-                    <div><span className="text-muted-foreground">Motorista:</span> <span className="font-medium">{driver?.name || '—'}</span></div>
-                    <div><span className="text-muted-foreground">Local:</span> <span className="font-medium">{trip.consultLocation}</span></div>
-                  </div>
-                  {trip.passengers.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {trip.passengers.map(p => {
-                        const pat = patients.find(pt => pt.id === p.patientId);
-                        return (
-                          <Badge key={p.patientId} variant="outline" className="text-xs">
-                            {pat?.name || '—'}{p.hasCompanion ? ' +Acomp.' : ''}
-                          </Badge>
-                        );
-                      })}
+                        {/* Details grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Veículo</span>
+                            <p className="font-medium truncate">{vehicle ? `${vehicle.modelo} • ${vehicle.plate}` : '—'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Motorista</span>
+                            <p className="font-medium truncate">{driver?.name || '—'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Ocupação</span>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{totalSeats}/{vehicle?.capacity || '?'}</p>
+                              {vehicle && (
+                                <div className="flex-1 h-1.5 rounded-full bg-muted max-w-16 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${occupancy >= 100 ? 'bg-destructive' : occupancy >= 75 ? 'bg-warning' : 'bg-secondary'}`}
+                                    style={{ width: `${Math.min(occupancy, 100)}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Pacientes</span>
+                            <p className="font-medium">{trip.passengers.length}</p>
+                          </div>
+                        </div>
+
+                        {/* Passengers */}
+                        {trip.passengers.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap gap-1.5">
+                            {trip.passengers.map(p => {
+                              const pat = patients.find(pt => pt.id === p.patientId);
+                              return (
+                                <Badge key={p.patientId} variant="outline" className="text-[10px] bg-muted/50 font-normal">
+                                  {pat?.name || '—'}{p.hasCompanion ? ' +Acomp.' : ''}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
