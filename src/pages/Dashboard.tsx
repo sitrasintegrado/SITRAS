@@ -165,6 +165,66 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Managerial Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-md bg-gradient-to-br from-card to-primary/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="h-6 w-6 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{managerial.occupancyRate}%</p>
+              <p className="text-xs text-muted-foreground font-medium">Taxa de ocupação</p>
+              <div className="mt-1 h-1.5 w-20 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${managerial.occupancyRate >= 80 ? 'bg-secondary' : managerial.occupancyRate >= 50 ? 'bg-warning' : 'bg-destructive'}`}
+                  style={{ width: `${Math.min(managerial.occupancyRate, 100)}%` }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md bg-gradient-to-br from-card to-secondary/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
+              <CalendarDays className="h-6 w-6 text-secondary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{managerial.monthTrips}</p>
+              <p className="text-xs text-muted-foreground font-medium">Viagens no mês</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{format(new Date(), "MMMM/yyyy", { locale: ptBR })}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md bg-gradient-to-br from-card to-info/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-info/10 flex items-center justify-center shrink-0">
+              <Users className="h-6 w-6 text-info" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{managerial.paxToday}</p>
+              <p className="text-xs text-muted-foreground font-medium">Pacientes transportados</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">hoje</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md bg-gradient-to-br from-card to-warning/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+              <Car className="h-6 w-6 text-warning" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{managerial.availableVehicles}</p>
+              <p className="text-xs text-muted-foreground font-medium">Veículos disponíveis</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">de {vehicles.filter(v => v.status === 'Ativo').length} ativos</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* CNH Alerts */}
       {cnhAlerts.length > 0 && (
         <Card className="border-warning/30 shadow-md overflow-hidden">
