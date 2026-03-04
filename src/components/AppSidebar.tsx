@@ -2,6 +2,7 @@ import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, SidebarHeader,
@@ -115,14 +116,17 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="p-3 flex items-center gap-3">
+        <div className={cn("flex items-center gap-3", collapsed ? "p-1 justify-center" : "p-3")}>
           <motion.div
-            className="h-10 w-10 rounded-xl bg-sidebar-accent/50 flex items-center justify-center shrink-0 overflow-hidden"
+            className={cn(
+              "rounded-xl bg-sidebar-accent/50 flex items-center justify-center shrink-0 overflow-hidden transition-all duration-200",
+              collapsed ? "h-8 w-8" : "h-10 w-10"
+            )}
             whileHover={{ scale: 1.08, rotate: 3 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 15 }}
           >
-            <img src={logo} alt="SITRAS Logo" className="h-8 w-8 object-contain" />
+            <img src={logo} alt="SITRAS Logo" className={cn("object-contain", collapsed ? "h-6 w-6" : "h-8 w-8")} />
           </motion.div>
           <AnimatePresence mode="wait">
             {!collapsed && (
