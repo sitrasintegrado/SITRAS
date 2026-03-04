@@ -104,15 +104,7 @@ const Dashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card
-          className="relative overflow-hidden border-0 shadow-md cursor-pointer hover:shadow-lg hover:ring-1 hover:ring-primary/20 transition-all"
-          onClick={() => {
-            setDateFilter(today);
-            setVehicleFilter('all');
-            setDriverFilter('all');
-            document.getElementById('trips-section')?.scrollIntoView({ behavior: 'smooth' });
-          }}
-        >
+        <Card className="relative overflow-hidden border-0 shadow-md">
           <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-[4rem]" />
           <CardContent className="p-5 flex items-center gap-4">
             <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -122,10 +114,9 @@ const Dashboard = () => {
               <p className="text-3xl font-bold tracking-tight">{stats.total}</p>
               <p className="text-xs text-muted-foreground font-medium">Viagens hoje</p>
               {stats.confirmed > 0 && (
-                <p className="text-[10px] text-info mt-0.5">{stats.confirmed} confirmada{stats.confirmed > 1 ? 's' : ''} — clique para ver</p>
+                <p className="text-[10px] text-info mt-0.5">{stats.confirmed} confirmada{stats.confirmed > 1 ? 's' : ''}</p>
               )}
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />
           </CardContent>
         </Card>
 
