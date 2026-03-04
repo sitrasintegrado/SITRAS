@@ -10,6 +10,7 @@ import Agendamentos from "./pages/Agendamentos";
 import Pacientes from "./pages/Pacientes";
 import Veiculos from "./pages/Veiculos";
 import Motoristas from "./pages/Motoristas";
+import Manutencao from "./pages/Manutencao";
 import Relatorios from "./pages/Relatorios";
 import Usuarios from "./pages/Usuarios";
 import Login from "./pages/Login";
@@ -38,6 +39,7 @@ function ProtectedRoutes() {
         <Route path="/pacientes" element={<Pacientes />} />
         <Route path="/veiculos" element={<Veiculos />} />
         <Route path="/motoristas" element={<Motoristas />} />
+        <Route path="/manutencao" element={<Manutencao />} />
         <Route path="/relatorios" element={<Relatorios />} />
         <Route path="/usuarios" element={<Usuarios />} />
         <Route path="*" element={<NotFound />} />

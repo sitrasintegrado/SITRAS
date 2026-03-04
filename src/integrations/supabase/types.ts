@@ -44,6 +44,59 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenances: {
+        Row: {
+          cost: number | null
+          created_at: string
+          date: string
+          description: string
+          id: string
+          next_review_date: string | null
+          next_review_km: number | null
+          part_replaced: string
+          type: Database["public"]["Enums"]["maintenance_type"]
+          vehicle_id: string
+          vehicle_km: number | null
+          workshop: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          date: string
+          description?: string
+          id?: string
+          next_review_date?: string | null
+          next_review_km?: number | null
+          part_replaced?: string
+          type?: Database["public"]["Enums"]["maintenance_type"]
+          vehicle_id: string
+          vehicle_km?: number | null
+          workshop?: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          next_review_date?: string | null
+          next_review_km?: number | null
+          part_replaced?: string
+          type?: Database["public"]["Enums"]["maintenance_type"]
+          vehicle_id?: string
+          vehicle_km?: number | null
+          workshop?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenances_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string
@@ -213,10 +266,7 @@ export type Database = {
           chassi: string
           created_at: string
           id: string
-          last_maintenance: string | null
           modelo: string
-          next_review: string | null
-          oil_change_km: number | null
           plate: string
           renavam: string
           status: Database["public"]["Enums"]["vehicle_status"]
@@ -228,10 +278,7 @@ export type Database = {
           chassi?: string
           created_at?: string
           id?: string
-          last_maintenance?: string | null
           modelo?: string
-          next_review?: string | null
-          oil_change_km?: number | null
           plate?: string
           renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]
@@ -243,10 +290,7 @@ export type Database = {
           chassi?: string
           created_at?: string
           id?: string
-          last_maintenance?: string | null
           modelo?: string
-          next_review?: string | null
-          oil_change_km?: number | null
           plate?: string
           renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]
@@ -273,6 +317,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "gestor" | "visualizador"
+      maintenance_type: "preventiva" | "corretiva" | "emergencial"
       trip_status: "Confirmada" | "Cancelada" | "Concluída"
       vehicle_status: "Ativo" | "Manutenção" | "Inativo"
       vehicle_type: "Carro" | "Van" | "Ônibus"
@@ -404,6 +449,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gestor", "visualizador"],
+      maintenance_type: ["preventiva", "corretiva", "emergencial"],
       trip_status: ["Confirmada", "Cancelada", "Concluída"],
       vehicle_status: ["Ativo", "Manutenção", "Inativo"],
       vehicle_type: ["Carro", "Van", "Ônibus"],

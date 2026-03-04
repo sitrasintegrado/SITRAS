@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useTrips, useVehicles, useDrivers, usePatients } from '@/hooks/use-supabase-data';
+import { useTrips, useVehicles, useDrivers, usePatients, useMaintenances } from '@/hooks/use-supabase-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ const Dashboard = () => {
   const { vehicles } = useVehicles();
   const { drivers } = useDrivers();
   const { patients } = usePatients();
+  const { maintenances } = useMaintenances();
 
   const today = new Date().toISOString().split('T')[0];
   const [dateFilter, setDateFilter] = useState(today);
@@ -75,19 +76,26 @@ const Dashboard = () => {
 
   const maintenanceAlerts = useMemo(() => {
     const now = new Date();
-    return vehicles.map(v => {
-      const alerts: string[] = [];
-      let severity: 'ok' | 'warning' | 'danger' = 'ok' as 'ok' | 'warning' | 'danger';
-
-      if (v.nextReview) {
-        const days = differenceInDays(parseISO(v.nextReview), now);
-        if (days < 0) { alerts.push(`Revisão vencida há ${Math.abs(days)}d`); severity = 'danger'; }
-        else if (days <= 15) { alerts.push(`Revisão em ${days}d`); severity = 'warning'; }
+    // Get the latest maintenance per vehicle that has a next_review_date
+    const latestByVehicle = new Map<string, { nextReviewDate: string }>();
+    maintenances.forEach(m => {
+      if (!m.nextReviewDate) return;
+      const existing = latestByVehicle.get(m.vehicleId);
+      if (!existing || m.date > (existing as any).date) {
+        latestByVehicle.set(m.vehicleId, { nextReviewDate: m.nextReviewDate, ...(m as any) });
       }
+    });
 
-      return { vehicle: v, alerts, severity };
-    }).filter(a => a.alerts.length > 0);
-  }, [vehicles]);
+    return Array.from(latestByVehicle.entries()).map(([vehicleId, data]) => {
+      const v = vehicles.find(ve => ve.id === vehicleId);
+      if (!v) return null;
+      const days = differenceInDays(parseISO(data.nextReviewDate), now);
+      const severity: 'ok' | 'warning' | 'danger' = days < 0 ? 'danger' : days <= 15 ? 'warning' : 'ok';
+      const alert = days < 0 ? `Revisão vencida há ${Math.abs(days)}d` : `Revisão em ${days}d`;
+      if (severity === 'ok') return null;
+      return { vehicle: v, alerts: [alert], severity };
+    }).filter(Boolean) as { vehicle: typeof vehicles[0]; alerts: string[]; severity: 'warning' | 'danger' }[];
+  }, [maintenances, vehicles]);
 
   const statusConfig = (s: string) => {
     if (s === 'Confirmada') return { bg: 'bg-info/10 text-info border-info/20', dot: 'bg-info' };
