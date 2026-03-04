@@ -1,6 +1,7 @@
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, SidebarHeader,
@@ -12,11 +13,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText,
-  ShieldCheck, LogOut, ChevronUp, Settings, HelpCircle, User,
+  ShieldCheck, LogOut, ChevronUp,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import logo from '@/assets/logo.png';
 
 const roleLabels = {
@@ -29,6 +29,21 @@ const roleBadgeClass = {
   admin: 'bg-primary/20 text-primary border-primary/30',
   gestor: 'bg-secondary/20 text-secondary border-secondary/30',
   visualizador: 'bg-muted text-muted-foreground border-border',
+};
+
+const textVariants = {
+  visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: 'easeOut' as const } },
+  hidden: { opacity: 0, x: -8, transition: { duration: 0.15, ease: 'easeIn' as const } },
+};
+
+const staggerContainer = {
+  visible: { transition: { staggerChildren: 0.04 } },
+  hidden: { transition: { staggerChildren: 0.02 } },
+};
+
+const itemVariants = {
+  visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: 'easeOut' as const } },
+  hidden: { opacity: 0, x: -6, transition: { duration: 0.12, ease: 'easeIn' as const } },
 };
 
 export function AppSidebar() {
@@ -57,77 +72,109 @@ export function AppSidebar() {
     ? user.email.substring(0, 2).toUpperCase()
     : 'US';
 
-  const renderMenuItems = (items: typeof mainItems) =>
-    items.map((item) => (
-      <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton asChild isActive={location.pathname === item.url} tooltip={item.title}>
-          <NavLink
-            to={item.url}
-            end
-            className="hover:bg-sidebar-accent transition-colors duration-150"
-            activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-          >
-            <item.icon className="mr-2 h-4 w-4 shrink-0" />
-            {!collapsed && <span>{item.title}</span>}
-          </NavLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    ));
+  const renderMenuItems = (items: typeof mainItems) => (
+    <motion.div variants={staggerContainer} initial={false} animate="visible">
+      {items.map((item, idx) => (
+        <motion.div key={item.title} variants={itemVariants}>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={location.pathname === item.url} tooltip={item.title}>
+              <NavLink
+                to={item.url}
+                end
+                className="hover:bg-sidebar-accent transition-colors duration-150"
+                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                >
+                  <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                </motion.div>
+                <AnimatePresence mode="wait">
+                  {!collapsed && (
+                    <motion.span
+                      key="label"
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      variants={textVariants}
+                    >
+                      {item.title}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </motion.div>
+      ))}
+    </motion.div>
+  );
 
   return (
     <Sidebar collapsible="icon">
-      {/* Header with logo */}
       <SidebarHeader>
         <div className="p-3 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-sidebar-accent/50 flex items-center justify-center shrink-0 overflow-hidden">
+          <motion.div
+            className="h-10 w-10 rounded-xl bg-sidebar-accent/50 flex items-center justify-center shrink-0 overflow-hidden"
+            whileHover={{ scale: 1.08, rotate: 3 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+          >
             <img src={logo} alt="SITRAS Logo" className="h-8 w-8 object-contain" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm text-sidebar-foreground leading-tight tracking-wide">
-                SITRAS
-              </span>
-              <span className="text-[10px] text-sidebar-foreground/60 leading-tight">
-                Sistema de Transporte da Saúde
-              </span>
-            </div>
-          )}
+          </motion.div>
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.div
+                key="brand"
+                className="flex flex-col min-w-0"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <span className="font-bold text-sm text-sidebar-foreground leading-tight tracking-wide">
+                  SITRAS
+                </span>
+                <span className="text-[10px] text-sidebar-foreground/60 leading-tight">
+                  Sistema de Transporte da Saúde
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Main navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest">
-            Principal
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{renderMenuItems(mainItems)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Cadastros */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest">
-            Cadastros
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{renderMenuItems(cadastroItems)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Sistema */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest">
-            Sistema
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{renderMenuItems(otherItems)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {[
+          { label: 'Principal', items: mainItems },
+          { label: 'Cadastros', items: cadastroItems },
+          { label: 'Sistema', items: otherItems },
+        ].map((section) => (
+          <SidebarGroup key={section.label}>
+            <AnimatePresence mode="wait">
+              {!collapsed && (
+                <motion.div
+                  key={section.label}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest">
+                    {section.label}
+                  </SidebarGroupLabel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <SidebarGroupContent>
+              <SidebarMenu>{renderMenuItems(section.items)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
-      {/* Footer with user profile */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -137,24 +184,49 @@ export function AppSidebar() {
                   size="lg"
                   className="hover:bg-sidebar-accent transition-colors duration-150 data-[state=open]:bg-sidebar-accent"
                 >
-                  <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                    <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  {!collapsed && (
-                    <div className="flex flex-col min-w-0 flex-1 text-left">
-                      <span className="text-xs font-medium text-sidebar-foreground truncate">
-                        {user?.email}
-                      </span>
-                      {role && (
-                        <span className="text-[10px] text-sidebar-foreground/60 truncate">
-                          {roleLabels[role]}
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  >
+                    <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                      <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </motion.div>
+                  <AnimatePresence mode="wait">
+                    {!collapsed && (
+                      <motion.div
+                        key="user-info"
+                        className="flex flex-col min-w-0 flex-1 text-left"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <span className="text-xs font-medium text-sidebar-foreground truncate">
+                          {user?.email}
                         </span>
-                      )}
-                    </div>
-                  )}
-                  {!collapsed && <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/40" />}
+                        {role && (
+                          <span className="text-[10px] text-sidebar-foreground/60 truncate">
+                            {roleLabels[role]}
+                          </span>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <AnimatePresence>
+                    {!collapsed && (
+                      <motion.div
+                        initial={{ opacity: 0, rotate: -90 }}
+                        animate={{ opacity: 1, rotate: 0 }}
+                        exit={{ opacity: 0, rotate: -90 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/40" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
