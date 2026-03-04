@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, Ban } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -24,6 +25,33 @@ const emptyTrip: Omit<Trip, 'id'> = {
   passengers: [],
   notes: '',
   status: 'Confirmada',
+};
+
+/** Occupancy bar component */
+const OccupancyBar = ({ used, total }: { used: number; total: number }) => {
+  const pct = total > 0 ? Math.round((used / total) * 100) : 0;
+  const color =
+    pct >= 100 ? 'bg-destructive' :
+    pct >= 75 ? 'bg-warning' :
+    'bg-secondary';
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">Ocupação</span>
+        <span className="font-semibold">
+          {used}/{total} vagas ({pct}%)
+          {pct >= 100 && <span className="ml-1 text-destructive font-bold">LOTADO</span>}
+        </span>
+      </div>
+      <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${color}`}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
+    </div>
+  );
 };
 
 const Agendamentos = () => {
@@ -53,6 +81,19 @@ const Agendamentos = () => {
   const currentVehicle = vehicles.find(v => v.id === form.vehicleId);
   const usedSeats = form.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
   const available = currentVehicle ? currentVehicle.capacity - usedSeats : 0;
+  const isFull = currentVehicle ? usedSeats >= currentVehicle.capacity : false;
+
+  // Calculate occupancy for each vehicle across all trips on the same date
+  const vehicleOccupancyOnDate = useMemo(() => {
+    const map = new Map<string, number>();
+    trips.forEach(t => {
+      if (t.date === form.date && t.status !== 'Cancelada' && t.id !== editId) {
+        const seats = t.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
+        map.set(t.vehicleId, (map.get(t.vehicleId) || 0) + seats);
+      }
+    });
+    return map;
+  }, [trips, form.date, editId]);
 
   const openNew = () => { setEditId(null); setForm(emptyTrip); setDialogOpen(true); };
   const openEdit = (t: Trip) => { setEditId(t.id); setForm({ ...t }); setDialogOpen(true); };
@@ -60,6 +101,10 @@ const Agendamentos = () => {
   const handleSave = async () => {
     if (!form.destination || !form.vehicleId || !form.driverId) {
       toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' });
+      return;
+    }
+    if (currentVehicle && usedSeats > currentVehicle.capacity) {
+      toast({ title: 'Capacidade do veículo excedida!', description: `Máximo: ${currentVehicle.capacity} vagas`, variant: 'destructive' });
       return;
     }
     if (editId) {
@@ -81,7 +126,7 @@ const Agendamentos = () => {
     if (exists) {
       setForm({ ...form, passengers: form.passengers.filter(p => p.patientId !== patientId) });
     } else {
-      if (available <= 0) { toast({ title: 'Veículo lotado!', variant: 'destructive' }); return; }
+      if (available <= 0) { toast({ title: 'Veículo lotado!', description: 'Não é possível adicionar mais passageiros.', variant: 'destructive' }); return; }
       setForm({ ...form, passengers: [...form.passengers, { patientId, hasCompanion: false }] });
     }
   };
@@ -140,14 +185,15 @@ const Agendamentos = () => {
             const vehicle = vehicles.find(v => v.id === trip.vehicleId);
             const driver = drivers.find(d => d.id === trip.driverId);
             const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
-            const full = vehicle ? seats >= vehicle.capacity : false;
+            const capacity = vehicle?.capacity || 0;
+            const full = capacity > 0 && seats >= capacity;
             return (
               <Card key={trip.id} className={full ? 'border-destructive/50' : ''}>
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
                       {trip.date} {trip.departureTime} — {trip.destination}
-                      {full && <AlertTriangle className="h-4 w-4 text-destructive" />}
+                      {full && <Ban className="h-4 w-4 text-destructive" />}
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge className={statusColor(trip.status)}>{trip.status}</Badge>
@@ -156,15 +202,15 @@ const Agendamentos = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                   <div className="text-sm grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <div><span className="text-muted-foreground">Veículo:</span> {vehicle?.type} {vehicle?.plate}</div>
-                    <div><span className="text-muted-foreground">Ocupação:</span> {seats}/{vehicle?.capacity}</div>
                     <div><span className="text-muted-foreground">Motorista:</span> {driver?.name}</div>
                     <div><span className="text-muted-foreground">Local:</span> {trip.consultLocation}</div>
                   </div>
+                  {capacity > 0 && <OccupancyBar used={seats} total={capacity} />}
                   {trip.passengers.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1">
                       {trip.passengers.map(p => {
                         const pat = patients.find(pt => pt.id === p.patientId);
                         return <Badge key={p.patientId} variant="outline" className="text-xs">{pat?.name}{p.hasCompanion ? ' +Acomp.' : ''}</Badge>;
@@ -195,7 +241,18 @@ const Agendamentos = () => {
                 <Label>Veículo</Label>
                 <Select value={form.vehicleId} onValueChange={v => setForm({ ...form, vehicleId: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{vehicles.filter(v => v.status === 'Ativo').map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate} ({v.capacity} vagas)</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {vehicles.filter(v => v.status === 'Ativo').map(v => {
+                      const otherSeats = vehicleOccupancyOnDate.get(v.id) || 0;
+                      const vehicleFull = otherSeats >= v.capacity;
+                      return (
+                        <SelectItem key={v.id} value={v.id} disabled={vehicleFull}>
+                          {v.type} - {v.plate} ({v.capacity - otherSeats}/{v.capacity} vagas)
+                          {vehicleFull && ' — LOTADO'}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
                 </Select>
               </div>
               <div>
@@ -219,11 +276,16 @@ const Agendamentos = () => {
             </div>
 
             {currentVehicle && (
-              <div className="rounded-lg border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Pacientes</Label>
-                  <Badge variant={available <= 0 ? 'destructive' : 'outline'}>{usedSeats}/{currentVehicle.capacity} vagas</Badge>
+              <div className="rounded-lg border p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Pacientes</Label>
+                  {isFull && (
+                    <Badge variant="destructive" className="flex items-center gap-1">
+                      <Ban className="h-3 w-3" /> Veículo Lotado
+                    </Badge>
+                  )}
                 </div>
+                <OccupancyBar used={usedSeats} total={currentVehicle.capacity} />
                 <div className="max-h-48 overflow-y-auto space-y-2">
                   {patients.map(pat => {
                     const isSelected = form.passengers.some(p => p.patientId === pat.id);
@@ -231,13 +293,21 @@ const Agendamentos = () => {
                     return (
                       <div key={pat.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
                         <div className="flex items-center gap-2">
-                          <Checkbox checked={isSelected} onCheckedChange={() => togglePassenger(pat.id)} />
-                          <span className="text-sm">{pat.name}</span>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => togglePassenger(pat.id)}
+                            disabled={!isSelected && isFull}
+                          />
+                          <span className={`text-sm ${!isSelected && isFull ? 'text-muted-foreground' : ''}`}>{pat.name}</span>
                           <span className="text-xs text-muted-foreground">{pat.cpf}</span>
                         </div>
                         {isSelected && (
                           <div className="flex items-center gap-1">
-                            <Checkbox checked={passenger?.hasCompanion} onCheckedChange={() => toggleCompanion(pat.id)} />
+                            <Checkbox
+                              checked={passenger?.hasCompanion}
+                              onCheckedChange={() => toggleCompanion(pat.id)}
+                              disabled={!passenger?.hasCompanion && available <= 0}
+                            />
                             <span className="text-xs text-muted-foreground">Acompanhante</span>
                           </div>
                         )}
@@ -253,7 +323,7 @@ const Agendamentos = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>Salvar</Button>
+            <Button onClick={handleSave} disabled={currentVehicle ? usedSeats > currentVehicle.capacity : false}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
