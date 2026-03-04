@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CalendarDays, Car, Users, UserCog, AlertTriangle, ShieldAlert,
-  TrendingUp, Clock, MapPin, Filter, ChevronRight
+  TrendingUp, Clock, MapPin, Filter, ChevronRight, Wrench, Ban
 } from 'lucide-react';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -261,6 +261,59 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Vehicle Status Alerts */}
+      {(() => {
+        const maintenance = vehicles.filter(v => v.status === 'Manutenção');
+        const inactive = vehicles.filter(v => v.status === 'Inativo');
+        if (maintenance.length === 0 && inactive.length === 0) return null;
+        return (
+          <Card className="border-muted-foreground/20 shadow-md overflow-hidden">
+            <div className="h-1 w-full bg-gradient-to-r from-warning to-muted-foreground" />
+            <CardHeader className="pb-3 pt-4">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-muted-foreground" />
+                Veículos Indisponíveis
+                <Badge variant="outline" className="ml-auto text-[10px]">
+                  {maintenance.length + inactive.length} veículo{maintenance.length + inactive.length > 1 ? 's' : ''}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <div className="space-y-2">
+                {maintenance.map(v => (
+                  <div key={v.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-2.5 w-2.5 rounded-full shrink-0 bg-warning" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{v.modelo} — {v.plate}</p>
+                        <p className="text-[11px] text-muted-foreground">{v.type} • Cap. {v.capacity}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] bg-warning/10 text-warning border-warning/20 shrink-0">
+                      <Wrench className="h-3 w-3 mr-1" /> Manutenção
+                    </Badge>
+                  </div>
+                ))}
+                {inactive.map(v => (
+                  <div key={v.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-2.5 w-2.5 rounded-full shrink-0 bg-destructive" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{v.modelo} — {v.plate}</p>
+                        <p className="text-[11px] text-muted-foreground">{v.type} • Cap. {v.capacity}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] bg-destructive/10 text-destructive border-destructive/20 shrink-0">
+                      <Ban className="h-3 w-3 mr-1" /> Inativo
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Filters */}
       <Card className="border-0 shadow-md">
