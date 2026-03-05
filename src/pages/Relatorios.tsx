@@ -9,6 +9,7 @@ import {
   exportPeriodReport,
   exportConsolidatedReport,
   exportMaintenanceReport,
+  exportMaintenanceByVehicleReport,
 } from '@/lib/pdf-export';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
