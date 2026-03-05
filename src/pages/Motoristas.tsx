@@ -67,6 +67,7 @@ const Motoristas = () => {
               {drivers.map(d => (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.name}</TableCell>
+                  <TableCell>{d.cpf || '—'}</TableCell>
                   <TableCell>{d.cnh}</TableCell>
                   <TableCell>{d.cnhCategory}</TableCell>
                   <TableCell>
