@@ -81,7 +81,7 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, code: string, us
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Sistema Integrado de Transporte Sanitário', textStartX, 20);
+  doc.text('Sistema Integrado de Transporte da Saúde', textStartX, 20);
 
   // Report title right-aligned
   doc.setFontSize(11);
