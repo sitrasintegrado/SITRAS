@@ -513,6 +513,109 @@ export async function exportMaintenanceByVehicleReport(
   return true;
 }
 
+// ══════════════════════════════════════════════
+// DRIVER SCHEDULE PDF (Agenda do Motorista)
+// ══════════════════════════════════════════════
+
+interface DriverScheduleData {
+  driverName: string;
+  vehicleLabel: string;
+  date: string;
+  trips: {
+    departureTime: string;
+    destination: string;
+    consultLocation: string;
+    passengers: { name: string; hasCompanion: boolean }[];
+    notes: string;
+    status: string;
+  }[];
+  userName: string;
+}
+
+export async function exportDriverSchedulePDF(data: DriverScheduleData) {
+  if (!data.trips.length) return false;
+
+  const code = genCode();
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const w = doc.internal.pageSize.getWidth();
+  const logo = await getLogoBase64();
+
+  addHeader(doc, 'Agenda do Motorista', `Data: ${fmtDate(data.date)} — Motorista: ${data.driverName} — Veículo: ${data.vehicleLabel}`, code, data.userName, logo);
+
+  // Trip table
+  const rows = data.trips.map((t, i) => {
+    const paxNames = t.passengers.map(p => p.name).join(', ') || '—';
+    const companions = t.passengers.filter(p => p.hasCompanion).map(p => p.name).join(', ') || 'Nenhum';
+    return [
+      String(i + 1),
+      t.departureTime || '—',
+      paxNames,
+      t.destination || '—',
+      t.consultLocation || '—',
+      companions,
+      t.notes || '—',
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 50,
+    head: [['#', 'Horário', 'Paciente(s)', 'Destino', 'Local de Saída', 'Acompanhante(s)', 'Observações']],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 8, fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 3 },
+    alternateRowStyles: { fillColor: [240, 245, 250] },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      1: { cellWidth: 18 },
+      6: { cellWidth: 30 },
+    },
+    margin: { left: 14, right: 14, bottom: 60 },
+  });
+
+  // Signature area on last page
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const h = doc.internal.pageSize.getHeight();
+
+    if (i === totalPages) {
+      const sigY = Math.max((doc as any).lastAutoTable?.finalY + 25 || h - 55, h - 55);
+
+      // Signature lines
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.3);
+
+      // Driver signature
+      doc.line(14, sigY, 90, sigY);
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text('Assinatura do Motorista', 52, sigY + 4, { align: 'center' });
+      doc.setFontSize(7);
+      doc.text(data.driverName, 52, sigY + 8, { align: 'center' });
+
+      // Fleet manager signature
+      doc.line(w - 90, sigY, w - 14, sigY);
+      doc.setFontSize(8);
+      doc.text('Responsável da Frota', w - 52, sigY + 4, { align: 'center' });
+    }
+
+    // Footer
+    doc.setDrawColor(30, 64, 120);
+    doc.setLineWidth(0.5);
+    const h2 = doc.internal.pageSize.getHeight();
+    doc.line(14, h2 - 18, w - 14, h2 - 18);
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    doc.text(code, 14, h2 - 12);
+    doc.text('SITRAS — Documento gerado eletronicamente', w / 2, h2 - 12, { align: 'center' });
+    doc.text(`Página ${i} de ${totalPages}`, w - 14, h2 - 12, { align: 'right' });
+  }
+
+  doc.save(`sitras_agenda_${code}.pdf`);
+  return true;
+}
+
 // Legacy compat
 export async function exportTripsPDF(trips: Trip[], title: string) {
   await buildDoc({ trips, vehicles: [], drivers: [], patients: [], title, subtitle: '', userName: 'Sistema' });
