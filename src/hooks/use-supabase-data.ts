@@ -83,7 +83,7 @@ export function useDrivers() {
 
   const fetch = useCallback(async () => {
     const { data } = await supabase.from('drivers').select('*').order('name');
-    if (data) setDrivers(data.map(r => ({ id: r.id, name: r.name, phone: r.phone, cnh: r.cnh, cnhCategory: r.cnh_category, cnhExpiry: r.cnh_expiry || '' })));
+    if (data) setDrivers(data.map(r => ({ id: r.id, name: r.name, cpf: (r as any).cpf || '', phone: r.phone, cnh: r.cnh, cnhCategory: r.cnh_category, cnhExpiry: r.cnh_expiry || '' })));
     setLoading(false);
   }, []);
 
