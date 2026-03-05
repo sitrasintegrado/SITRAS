@@ -150,6 +150,52 @@ const Agendamentos = () => {
     return 'bg-muted text-muted-foreground';
   };
 
+  const handleExportPDF = async () => {
+    if (!filtered.length) {
+      toast({ title: 'Sem viagens para exportar', variant: 'destructive' });
+      return;
+    }
+
+    // Group by driver for the PDF
+    const driverGroups = new Map<string, typeof filtered>();
+    filtered.forEach(t => {
+      const key = t.driverId || 'sem-motorista';
+      const arr = driverGroups.get(key) || [];
+      arr.push(t);
+      driverGroups.set(key, arr);
+    });
+
+    for (const [driverId, driverTrips] of driverGroups) {
+      const driver = drivers.find(d => d.id === driverId);
+      const firstTrip = driverTrips[0];
+      const vehicle = vehicles.find(v => v.id === firstTrip.vehicleId);
+
+      await exportDriverSchedulePDF({
+        driverName: driver?.name || 'Sem motorista',
+        vehicleLabel: vehicle ? `${vehicle.type} — ${vehicle.plate}` : '—',
+        date: firstTrip.date,
+        trips: driverTrips.map(t => {
+          const paxNames = t.passengers.map(p => {
+            const pat = patients.find(x => x.id === p.patientId);
+            return pat?.name || 'Paciente';
+          });
+          return {
+            departureTime: t.departureTime,
+            destination: t.destination,
+            consultLocation: t.consultLocation,
+            passengers: t.passengers.map(p => ({
+              name: patients.find(x => x.id === p.patientId)?.name || 'Paciente',
+              hasCompanion: p.hasCompanion,
+            })),
+            notes: t.notes,
+            status: t.status,
+          };
+        }),
+        userName: 'Administração',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,7 +203,12 @@ const Agendamentos = () => {
           <h1 className="text-2xl font-bold">Agendamentos</h1>
           <p className="text-sm text-muted-foreground">Gerencie as viagens de transporte</p>
         </div>
-        {canCreate && <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Nova Viagem</Button>}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportPDF} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> Exportar PDF
+          </Button>
+          {canCreate && <Button onClick={openNew} className="bg-secondary hover:bg-secondary/90"><Plus className="h-4 w-4 mr-1" /> Nova Viagem</Button>}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
