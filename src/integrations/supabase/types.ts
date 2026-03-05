@@ -44,6 +44,24 @@ export type Database = {
         }
         Relationships: []
       }
+      empresas: {
+        Row: {
+          created_at: string
+          id_empresa: number
+          nome_empresa: string | null
+        }
+        Insert: {
+          created_at?: string
+          id_empresa?: number
+          nome_empresa?: string | null
+        }
+        Update: {
+          created_at?: string
+          id_empresa?: number
+          nome_empresa?: string | null
+        }
+        Relationships: []
+      }
       maintenances: {
         Row: {
           cost: number | null
@@ -134,6 +152,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          id_empresa: number | null
         }
         Insert: {
           active?: boolean
@@ -141,6 +160,7 @@ export type Database = {
           email: string
           full_name?: string
           id: string
+          id_empresa?: number | null
         }
         Update: {
           active?: boolean
@@ -148,8 +168,17 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          id_empresa?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
+          },
+        ]
       }
       trip_passengers: {
         Row: {
