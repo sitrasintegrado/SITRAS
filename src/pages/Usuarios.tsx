@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
@@ -21,15 +21,22 @@ interface UserProfile {
   role: AppRole | null;
 }
 
+interface DriverOption {
+  id: string;
+  name: string;
+  user_id: string | null;
+}
+
 const Usuarios = () => {
   const { toast } = useToast();
   const { canManageUsers } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [drivers, setDrivers] = useState<DriverOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserProfile | null>(null);
-  const [newForm, setNewForm] = useState({ email: '', password: '', full_name: '', role: 'visualizador' as AppRole });
-  const [editForm, setEditForm] = useState({ full_name: '', role: 'visualizador' as AppRole, active: true });
+  const [newForm, setNewForm] = useState({ email: '', password: '', full_name: '', role: 'visualizador' as AppRole, driverId: '' });
+  const [editForm, setEditForm] = useState({ full_name: '', role: 'visualizador' as AppRole, active: true, driverId: '' });
 
   const fetchUsers = useCallback(async () => {
     const { data: profiles } = await supabase.from('profiles').select('*');
@@ -48,18 +55,33 @@ const Usuarios = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  const fetchDrivers = useCallback(async () => {
+    const { data } = await supabase.from('drivers').select('id, name, user_id');
+    if (data) setDrivers(data as DriverOption[]);
+  }, []);
+
+  useEffect(() => { fetchUsers(); fetchDrivers(); }, [fetchUsers, fetchDrivers]);
 
   const openNew = () => {
     setEditUser(null);
-    setNewForm({ email: '', password: '', full_name: '', role: 'visualizador' });
+    setNewForm({ email: '', password: '', full_name: '', role: 'visualizador', driverId: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (u: UserProfile) => {
     setEditUser(u);
-    setEditForm({ full_name: u.full_name, role: u.role || 'visualizador', active: u.active });
+    const linkedDriver = drivers.find(d => d.user_id === u.id);
+    setEditForm({ full_name: u.full_name, role: u.role || 'visualizador', active: u.active, driverId: linkedDriver?.id || '' });
     setDialogOpen(true);
+  };
+
+  const linkDriverToUser = async (driverId: string, userId: string) => {
+    // Unlink any previous driver from this user
+    await supabase.from('drivers').update({ user_id: null } as any).eq('user_id', userId);
+    // Link selected driver
+    if (driverId) {
+      await supabase.from('drivers').update({ user_id: userId } as any).eq('id', driverId);
+    }
   };
 
   const handleCreate = async () => {
@@ -67,7 +89,10 @@ const Usuarios = () => {
       toast({ title: 'Preencha e-mail e senha', variant: 'destructive' });
       return;
     }
-    // Create user via edge function
+    if (newForm.role === 'motorista' && !newForm.driverId) {
+      toast({ title: 'Selecione o motorista a vincular', variant: 'destructive' });
+      return;
+    }
     const { data, error } = await supabase.functions.invoke('manage-users', {
       body: { action: 'create', email: newForm.email, password: newForm.password, full_name: newForm.full_name, role: newForm.role },
     });
@@ -75,28 +100,44 @@ const Usuarios = () => {
       toast({ title: 'Erro ao criar usuário', description: error.message, variant: 'destructive' });
       return;
     }
+    // Link driver if motorista
+    if (newForm.role === 'motorista' && newForm.driverId && data?.user?.id) {
+      await linkDriverToUser(newForm.driverId, data.user.id);
+    }
     toast({ title: 'Usuário criado com sucesso' });
     setDialogOpen(false);
     await fetchUsers();
+    await fetchDrivers();
   };
 
   const handleUpdate = async () => {
     if (!editUser) return;
-    // Update profile
+    if (editForm.role === 'motorista' && !editForm.driverId) {
+      toast({ title: 'Selecione o motorista a vincular', variant: 'destructive' });
+      return;
+    }
     await supabase.from('profiles').update({
       full_name: editForm.full_name,
       active: editForm.active,
     }).eq('id', editUser.id);
 
-    // Update role
     if (editUser.role !== editForm.role) {
       await supabase.from('user_roles').delete().eq('user_id', editUser.id);
       await supabase.from('user_roles').insert({ user_id: editUser.id, role: editForm.role });
     }
 
+    // Handle driver linking
+    if (editForm.role === 'motorista') {
+      await linkDriverToUser(editForm.driverId, editUser.id);
+    } else {
+      // Unlink if role changed away from motorista
+      await supabase.from('drivers').update({ user_id: null } as any).eq('user_id', editUser.id);
+    }
+
     toast({ title: 'Usuário atualizado' });
     setDialogOpen(false);
     await fetchUsers();
+    await fetchDrivers();
   };
 
   const handleDelete = async (id: string) => {
@@ -117,6 +158,10 @@ const Usuarios = () => {
     if (role === 'motorista') return <Badge className="bg-accent text-accent-foreground">Motorista</Badge>;
     return <Badge variant="outline">Visualizador</Badge>;
   };
+
+  // Available drivers = those not linked to another user (or linked to current edit user)
+  const availableDrivers = (currentUserId?: string) =>
+    drivers.filter(d => !d.user_id || d.user_id === currentUserId);
 
   if (!canManageUsers) {
     return <div className="p-8 text-center text-muted-foreground">Acesso restrito a administradores.</div>;
@@ -187,13 +232,26 @@ const Usuarios = () => {
                 <Select value={editForm.role} onValueChange={(v: AppRole) => setEditForm({ ...editForm, role: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                     <SelectItem value="admin">Administrador Geral</SelectItem>
+                    <SelectItem value="admin">Administrador Geral</SelectItem>
                     <SelectItem value="gestor">Gestor de Frota</SelectItem>
                     <SelectItem value="visualizador">Visualizador</SelectItem>
                     <SelectItem value="motorista">Motorista</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {editForm.role === 'motorista' && (
+                <div>
+                  <Label>Vincular ao motorista</Label>
+                  <Select value={editForm.driverId} onValueChange={v => setEditForm({ ...editForm, driverId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o motorista" /></SelectTrigger>
+                    <SelectContent>
+                      {availableDrivers(editUser.id).map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Switch checked={editForm.active} onCheckedChange={v => setEditForm({ ...editForm, active: v })} />
                 <Label>Usuário ativo</Label>
@@ -209,13 +267,26 @@ const Usuarios = () => {
                 <Select value={newForm.role} onValueChange={(v: AppRole) => setNewForm({ ...newForm, role: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                     <SelectItem value="admin">Administrador Geral</SelectItem>
+                    <SelectItem value="admin">Administrador Geral</SelectItem>
                     <SelectItem value="gestor">Gestor de Frota</SelectItem>
                     <SelectItem value="visualizador">Visualizador</SelectItem>
                     <SelectItem value="motorista">Motorista</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {newForm.role === 'motorista' && (
+                <div>
+                  <Label>Vincular ao motorista</Label>
+                  <Select value={newForm.driverId} onValueChange={v => setNewForm({ ...newForm, driverId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o motorista" /></SelectTrigger>
+                    <SelectContent>
+                      {availableDrivers().map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
