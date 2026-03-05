@@ -95,7 +95,7 @@ export function useDrivers() {
   };
 
   const update = async (id: string, d: Omit<Driver, 'id'>) => {
-    await supabase.from('drivers').update({ name: d.name, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null }).eq('id', id);
+    await supabase.from('drivers').update({ name: d.name, cpf: d.cpf, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null } as any).eq('id', id);
     await fetch();
   };
 
