@@ -131,6 +131,25 @@ const MinhaAgenda = () => {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
 
+  const handleExportPDF = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await exportDriverSchedulePDF({
+      driverName,
+      vehicleLabel,
+      date: today,
+      trips: trips.map(t => ({
+        departureTime: t.departureTime,
+        destination: t.destination,
+        consultLocation: t.consultLocation,
+        passengers: t.passengers,
+        notes: t.notes,
+        status: t.status,
+      })),
+      userName: driverName || user?.email || 'Motorista',
+    });
+    if (!result) toast({ title: 'Sem viagens para exportar', variant: 'destructive' });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -163,14 +182,20 @@ const MinhaAgenda = () => {
 
       {/* Content */}
       <main className="px-4 py-4 pb-24 space-y-4 max-w-lg mx-auto">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground font-medium">
             {trips.length} viagen{trips.length !== 1 ? 's' : ''} hoje
           </p>
-          <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={trips.length === 0}>
+              <Download className="h-4 w-4 mr-1" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {loading ? (
