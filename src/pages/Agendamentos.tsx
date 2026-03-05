@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Trash2, AlertTriangle, Ban } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, Ban, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { exportDriverSchedulePDF } from '@/lib/pdf-export';
 
 const emptyTrip: Omit<Trip, 'id'> = {
   date: new Date().toISOString().split('T')[0],
