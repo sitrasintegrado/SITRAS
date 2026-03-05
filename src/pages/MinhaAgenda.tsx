@@ -3,8 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Clock, MapPin, Car, Users, Navigation, UserPlus, RefreshCw } from 'lucide-react';
+import { LogOut, Clock, MapPin, Car, Users, Navigation, UserPlus, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { exportDriverSchedulePDF } from '@/lib/pdf-export';
+import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
 
 interface DriverTrip {
