@@ -3,8 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Clock, MapPin, Car, Users, Navigation, UserPlus, RefreshCw } from 'lucide-react';
+import { LogOut, Clock, MapPin, Car, Users, Navigation, UserPlus, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { exportDriverSchedulePDF } from '@/lib/pdf-export';
+import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
 
 interface DriverTrip {
@@ -13,6 +15,7 @@ interface DriverTrip {
   destination: string;
   consultLocation: string;
   status: string;
+  notes: string;
   vehiclePlate: string;
   vehicleType: string;
   passengers: { name: string; hasCompanion: boolean }[];
@@ -26,9 +29,11 @@ const statusColors: Record<string, string> = {
 
 const MinhaAgenda = () => {
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const [trips, setTrips] = useState<DriverTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [driverName, setDriverName] = useState('');
+  const [vehicleLabel, setVehicleLabel] = useState('');
 
   const fetchTrips = useCallback(async () => {
     if (!user) return;
@@ -96,6 +101,10 @@ const MinhaAgenda = () => {
       passMap.set(p.trip_id, arr);
     });
 
+    // Set vehicle label from first trip's vehicle
+    const firstVehicle = vehicleMap.values().next().value;
+    if (firstVehicle) setVehicleLabel(`${firstVehicle.type} — ${firstVehicle.plate}`);
+
     setTrips(tripsData.map(t => {
       const v = vehicleMap.get(t.vehicle_id || '');
       return {
@@ -104,6 +113,7 @@ const MinhaAgenda = () => {
         destination: t.destination,
         consultLocation: t.consult_location,
         status: t.status,
+        notes: t.notes || '',
         vehiclePlate: v?.plate || '-',
         vehicleType: v?.type || '-',
         passengers: passMap.get(t.id) || [],
@@ -120,6 +130,25 @@ const MinhaAgenda = () => {
   const todayFormatted = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
+
+  const handleExportPDF = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await exportDriverSchedulePDF({
+      driverName,
+      vehicleLabel,
+      date: today,
+      trips: trips.map(t => ({
+        departureTime: t.departureTime,
+        destination: t.destination,
+        consultLocation: t.consultLocation,
+        passengers: t.passengers,
+        notes: t.notes,
+        status: t.status,
+      })),
+      userName: driverName || user?.email || 'Motorista',
+    });
+    if (!result) toast({ title: 'Sem viagens para exportar', variant: 'destructive' });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,14 +182,20 @@ const MinhaAgenda = () => {
 
       {/* Content */}
       <main className="px-4 py-4 pb-24 space-y-4 max-w-lg mx-auto">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground font-medium">
             {trips.length} viagen{trips.length !== 1 ? 's' : ''} hoje
           </p>
-          <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={trips.length === 0}>
+              <Download className="h-4 w-4 mr-1" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {loading ? (
