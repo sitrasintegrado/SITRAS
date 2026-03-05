@@ -81,7 +81,7 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, code: string, us
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Sistema Integrado de Transporte Sanitário', textStartX, 20);
+  doc.text('Sistema Integrado de Transporte da Saúde', textStartX, 20);
 
   // Report title right-aligned
   doc.setFontSize(11);
@@ -120,7 +120,7 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number, code: string
   }
 
   doc.text(`${code}`, 14, h - 12);
-  doc.text('SITRAS Saúde — Documento gerado eletronicamente', w / 2, h - 12, { align: 'center' });
+  doc.text('SITRAS — Documento gerado eletronicamente', w / 2, h - 12, { align: 'center' });
   doc.text(`Página ${pageNum} de ${totalPages}`, w - 14, h - 12, { align: 'right' });
 
   doc.setDrawColor(0, 0, 0);
