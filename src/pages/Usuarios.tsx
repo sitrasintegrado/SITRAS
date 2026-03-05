@@ -114,6 +114,7 @@ const Usuarios = () => {
   const roleBadge = (role: AppRole | null) => {
     if (role === 'admin') return <Badge className="bg-primary text-primary-foreground">Administrador</Badge>;
     if (role === 'gestor') return <Badge className="bg-secondary text-secondary-foreground">Gestor de Frota</Badge>;
+    if (role === 'motorista') return <Badge className="bg-accent text-accent-foreground">Motorista</Badge>;
     return <Badge variant="outline">Visualizador</Badge>;
   };
 
