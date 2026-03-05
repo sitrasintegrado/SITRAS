@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Trip, Vehicle, Driver, Patient } from '@/types';
+import { Trip, Vehicle, Driver, Patient, Maintenance } from '@/types';
 import logoUrl from '@/assets/logo.png';
 
 // ── Logo cache ──
