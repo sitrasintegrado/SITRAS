@@ -209,9 +209,10 @@ const Usuarios = () => {
                 <Select value={newForm.role} onValueChange={(v: AppRole) => setNewForm({ ...newForm, role: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Administrador Geral</SelectItem>
+                     <SelectItem value="admin">Administrador Geral</SelectItem>
                     <SelectItem value="gestor">Gestor de Frota</SelectItem>
                     <SelectItem value="visualizador">Visualizador</SelectItem>
+                    <SelectItem value="motorista">Motorista</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
