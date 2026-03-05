@@ -83,19 +83,19 @@ export function useDrivers() {
 
   const fetch = useCallback(async () => {
     const { data } = await supabase.from('drivers').select('*').order('name');
-    if (data) setDrivers(data.map(r => ({ id: r.id, name: r.name, phone: r.phone, cnh: r.cnh, cnhCategory: r.cnh_category, cnhExpiry: r.cnh_expiry || '' })));
+    if (data) setDrivers(data.map(r => ({ id: r.id, name: r.name, cpf: (r as any).cpf || '', phone: r.phone, cnh: r.cnh, cnhCategory: r.cnh_category, cnhExpiry: r.cnh_expiry || '' })));
     setLoading(false);
   }, []);
 
   useEffect(() => { fetch(); }, [fetch]);
 
   const save = async (d: Omit<Driver, 'id'>) => {
-    await supabase.from('drivers').insert({ name: d.name, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null });
+    await supabase.from('drivers').insert({ name: d.name, cpf: d.cpf, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null } as any);
     await fetch();
   };
 
   const update = async (id: string, d: Omit<Driver, 'id'>) => {
-    await supabase.from('drivers').update({ name: d.name, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null }).eq('id', id);
+    await supabase.from('drivers').update({ name: d.name, cpf: d.cpf, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null } as any).eq('id', id);
     await fetch();
   };
 

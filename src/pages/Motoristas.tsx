@@ -12,7 +12,7 @@ import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-const emptyDriver: Omit<Driver, 'id'> = { name: '', phone: '', cnh: '', cnhCategory: 'D', cnhExpiry: '' };
+const emptyDriver: Omit<Driver, 'id'> = { name: '', cpf: '', phone: '', cnh: '', cnhCategory: 'D', cnhExpiry: '' };
 
 const Motoristas = () => {
   const { toast } = useToast();
@@ -62,11 +62,12 @@ const Motoristas = () => {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>CNH</TableHead><TableHead>Categoria</TableHead><TableHead>Vencimento</TableHead><TableHead className="hidden md:table-cell">Telefone</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>CPF</TableHead><TableHead>CNH</TableHead><TableHead>Categoria</TableHead><TableHead>Vencimento</TableHead><TableHead className="hidden md:table-cell">Telefone</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
               {drivers.map(d => (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.name}</TableCell>
+                  <TableCell>{d.cpf || '—'}</TableCell>
                   <TableCell>{d.cnh}</TableCell>
                   <TableCell>{d.cnhCategory}</TableCell>
                   <TableCell>
@@ -83,7 +84,7 @@ const Motoristas = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {drivers.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum motorista.</TableCell></TableRow>}
+              {drivers.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum motorista.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -94,6 +95,7 @@ const Motoristas = () => {
           <DialogHeader><DialogTitle>{editId ? 'Editar Motorista' : 'Novo Motorista'}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <div><Label>Nome completo</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" /></div>
             <div><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>CNH</Label><Input value={form.cnh} onChange={e => setForm({ ...form, cnh: e.target.value })} /></div>
