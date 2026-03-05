@@ -23,6 +23,7 @@ export type Database = {
           id: string
           name: string
           phone: string
+          user_id: string | null
         }
         Insert: {
           cnh?: string
@@ -32,6 +33,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string
+          user_id?: string | null
         }
         Update: {
           cnh?: string
@@ -41,6 +43,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -345,7 +348,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "gestor" | "visualizador"
+      app_role: "admin" | "gestor" | "visualizador" | "motorista"
       maintenance_type: "preventiva" | "corretiva" | "emergencial"
       trip_status: "Confirmada" | "Cancelada" | "Concluída"
       vehicle_status: "Ativo" | "Manutenção" | "Inativo"
@@ -477,7 +480,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gestor", "visualizador"],
+      app_role: ["admin", "gestor", "visualizador", "motorista"],
       maintenance_type: ["preventiva", "corretiva", "emergencial"],
       trip_status: ["Confirmada", "Cancelada", "Concluída"],
       vehicle_status: ["Ativo", "Manutenção", "Inativo"],
