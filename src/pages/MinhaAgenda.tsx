@@ -28,9 +28,11 @@ const statusColors: Record<string, string> = {
 
 const MinhaAgenda = () => {
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const [trips, setTrips] = useState<DriverTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [driverName, setDriverName] = useState('');
+  const [vehicleLabel, setVehicleLabel] = useState('');
 
   const fetchTrips = useCallback(async () => {
     if (!user) return;
