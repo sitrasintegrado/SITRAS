@@ -12,7 +12,7 @@ import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-const emptyDriver: Omit<Driver, 'id'> = { name: '', phone: '', cnh: '', cnhCategory: 'D', cnhExpiry: '' };
+const emptyDriver: Omit<Driver, 'id'> = { name: '', cpf: '', phone: '', cnh: '', cnhCategory: 'D', cnhExpiry: '' };
 
 const Motoristas = () => {
   const { toast } = useToast();
