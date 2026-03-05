@@ -95,6 +95,7 @@ const Motoristas = () => {
           <DialogHeader><DialogTitle>{editId ? 'Editar Motorista' : 'Novo Motorista'}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <div><Label>Nome completo</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><Label>CPF</Label><Input value={form.cpf} onChange={e => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" /></div>
             <div><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>CNH</Label><Input value={form.cnh} onChange={e => setForm({ ...form, cnh: e.target.value })} /></div>
