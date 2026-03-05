@@ -1,27 +1,44 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo.png';
+
+const isCpf = (value: string) => /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(value.trim());
 
 const Login = () => {
   const { signIn } = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError('Preencha e-mail e senha.');
+    if (!identifier || !password) {
+      setError('Preencha todos os campos.');
       return;
     }
     setError('');
     setLoading(true);
+
+    let email = identifier.trim();
+
+    // If input looks like a CPF, resolve the email via RPC
+    if (isCpf(email)) {
+      const { data, error: rpcError } = await supabase.rpc('get_email_by_cpf', { _cpf: email });
+      if (rpcError || !data) {
+        setError('CPF não encontrado ou não vinculado a um usuário.');
+        setLoading(false);
+        return;
+      }
+      email = data as string;
+    }
+
     const { error: authError } = await signIn(email, password);
     if (authError) {
-      setError('E-mail ou senha inválidos.');
+      setError('Credenciais inválidas.');
       toast({ title: 'Erro ao entrar', description: authError.message, variant: 'destructive' });
     }
     setLoading(false);
@@ -57,11 +74,11 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="flex flex-col w-full gap-4">
           <div className="w-full flex flex-col gap-3">
             <input
-              placeholder="E-mail"
-              type="email"
-              value={email}
+              placeholder="E-mail ou CPF"
+              type="text"
+              value={identifier}
               className="w-full px-5 py-3 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/10 transition-all"
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setIdentifier(e.target.value)}
             />
             <input
               placeholder="Senha"
