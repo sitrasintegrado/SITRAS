@@ -100,6 +100,10 @@ const MinhaAgenda = () => {
       passMap.set(p.trip_id, arr);
     });
 
+    // Set vehicle label from first trip's vehicle
+    const firstVehicle = vehicleMap.values().next().value;
+    if (firstVehicle) setVehicleLabel(`${firstVehicle.type} — ${firstVehicle.plate}`);
+
     setTrips(tripsData.map(t => {
       const v = vehicleMap.get(t.vehicle_id || '');
       return {
@@ -108,6 +112,7 @@ const MinhaAgenda = () => {
         destination: t.destination,
         consultLocation: t.consult_location,
         status: t.status,
+        notes: t.notes || '',
         vehiclePlate: v?.plate || '-',
         vehicleType: v?.type || '-',
         passengers: passMap.get(t.id) || [],
