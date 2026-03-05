@@ -15,6 +15,7 @@ interface DriverTrip {
   destination: string;
   consultLocation: string;
   status: string;
+  notes: string;
   vehiclePlate: string;
   vehicleType: string;
   passengers: { name: string; hasCompanion: boolean }[];
