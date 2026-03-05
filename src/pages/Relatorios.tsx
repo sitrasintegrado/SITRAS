@@ -9,6 +9,7 @@ import {
   exportPeriodReport,
   exportConsolidatedReport,
   exportMaintenanceReport,
+  exportMaintenanceByVehicleReport,
 } from '@/lib/pdf-export';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ const Relatorios = () => {
   const [consolTo, setConsolTo] = useState(today);
   const [maintFrom, setMaintFrom] = useState(today);
   const [maintTo, setMaintTo] = useState(today);
+  const [maintVehicleId, setMaintVehicleId] = useState('all');
 
   const noData = () => toast({ title: 'Sem dados', description: 'Nenhum registro encontrado para os filtros selecionados.', variant: 'destructive' });
 
@@ -72,6 +74,11 @@ const Relatorios = () => {
 
   const handleMaintenance = async () => {
     if (!await exportMaintenanceReport(maintenances, vehicles, userName, maintFrom, maintTo)) noData();
+  };
+
+  const handleMaintenanceByVehicle = async () => {
+    if (maintVehicleId === 'all') { toast({ title: 'Selecione um veículo', variant: 'destructive' }); return; }
+    if (!await exportMaintenanceByVehicleReport(maintenances, vehicles, userName, maintVehicleId)) noData();
   };
 
   return (
@@ -181,6 +188,21 @@ const Relatorios = () => {
               <div><Label className="text-xs">Até</Label><Input type="date" value={maintTo} onChange={e => setMaintTo(e.target.value)} /></div>
             </div>
             <Button onClick={handleMaintenance} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
+          </CardContent>
+        </Card>
+
+        {/* Manutenção por Veículo */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4 text-primary" /> Manutenção por Veículo</CardTitle>
+            <CardDescription className="text-xs">Histórico completo de manutenção de um veículo</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={maintVehicleId} onValueChange={setMaintVehicleId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button onClick={handleMaintenanceByVehicle} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
           </CardContent>
         </Card>
       </div>
