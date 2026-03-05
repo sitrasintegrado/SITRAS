@@ -76,6 +76,11 @@ const Relatorios = () => {
     if (!await exportMaintenanceReport(maintenances, vehicles, userName, maintFrom, maintTo)) noData();
   };
 
+  const handleMaintenanceByVehicle = async () => {
+    if (maintVehicleId === 'all') { toast({ title: 'Selecione um veículo', variant: 'destructive' }); return; }
+    if (!await exportMaintenanceByVehicleReport(maintenances, vehicles, userName, maintVehicleId)) noData();
+  };
+
   return (
     <div className="space-y-6">
       <div>
