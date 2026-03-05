@@ -62,7 +62,7 @@ const Motoristas = () => {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>CNH</TableHead><TableHead>Categoria</TableHead><TableHead>Vencimento</TableHead><TableHead className="hidden md:table-cell">Telefone</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>CPF</TableHead><TableHead>CNH</TableHead><TableHead>Categoria</TableHead><TableHead>Vencimento</TableHead><TableHead className="hidden md:table-cell">Telefone</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
               {drivers.map(d => (
                 <TableRow key={d.id}>
