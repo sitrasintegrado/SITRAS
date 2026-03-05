@@ -82,8 +82,17 @@ export function useDrivers() {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    const { data } = await supabase.from('drivers').select('*').order('name');
-    if (data) setDrivers(data.map(r => ({ id: r.id, name: r.name, cpf: (r as any).cpf || '', phone: r.phone, cnh: r.cnh, cnhCategory: r.cnh_category, cnhExpiry: r.cnh_expiry || '' })));
+    // Try full table first (admin/gestor). If RLS blocks, fall back to summary function (visualizador).
+    const { data, error } = await supabase.from('drivers').select('*').order('name');
+    if (data && !error) {
+      setDrivers(data.map(r => ({ id: r.id, name: r.name, cpf: (r as any).cpf || '', phone: r.phone, cnh: r.cnh, cnhCategory: r.cnh_category, cnhExpiry: r.cnh_expiry || '' })));
+    } else {
+      // Visualizador fallback – only id & name via security definer function
+      const { data: summary } = await supabase.rpc('get_drivers_summary');
+      if (summary) {
+        setDrivers((summary as any[]).map(r => ({ id: r.id, name: r.name, cpf: '', phone: '', cnh: '', cnhCategory: '', cnhExpiry: '' })));
+      }
+    }
     setLoading(false);
   }, []);
 
