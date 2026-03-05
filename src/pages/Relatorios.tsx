@@ -190,6 +190,21 @@ const Relatorios = () => {
             <Button onClick={handleMaintenance} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
           </CardContent>
         </Card>
+
+        {/* Manutenção por Veículo */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4 text-primary" /> Manutenção por Veículo</CardTitle>
+            <CardDescription className="text-xs">Histórico completo de manutenção de um veículo</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={maintVehicleId} onValueChange={setMaintVehicleId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button onClick={handleMaintenanceByVehicle} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

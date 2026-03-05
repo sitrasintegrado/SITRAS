@@ -438,6 +438,81 @@ export async function exportMaintenanceReport(
   return true;
 }
 
+export async function exportMaintenanceByVehicleReport(
+  maintenances: Maintenance[], vehicles: Vehicle[], userName: string, vehicleId: string,
+) {
+  const filtered = maintenances.filter(m => m.vehicleId === vehicleId);
+  if (!filtered.length) return false;
+
+  const v = vehicles.find(x => x.id === vehicleId);
+  const vLabel = v ? `${v.type} ${v.modelo} — Placa: ${v.plate}` : 'Veículo não encontrado';
+
+  const code = genCode();
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const logo = await getLogoBase64();
+
+  addHeader(doc, 'Manutenção por Veículo', vLabel, code, userName, logo);
+
+  const totalCost = filtered.reduce((s, m) => s + (m.cost || 0), 0);
+  const byType = { preventiva: 0, corretiva: 0, emergencial: 0 };
+  filtered.forEach(m => { byType[m.type] = (byType[m.type] || 0) + 1; });
+
+  autoTable(doc, {
+    startY: 48,
+    head: [['Indicador', 'Valor']],
+    body: [
+      ['Total de Manutenções', String(filtered.length)],
+      ['Preventivas', String(byType.preventiva)],
+      ['Corretivas', String(byType.corretiva)],
+      ['Emergenciais', String(byType.emergencial)],
+      ['Custo Total', `R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 8 },
+    styles: { fontSize: 8 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+    margin: { left: 14, right: 160, bottom: 35 },
+  });
+
+  const rows = filtered
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((m, i) => {
+      const typeLabel = m.type === 'preventiva' ? 'Preventiva' : m.type === 'corretiva' ? 'Corretiva' : 'Emergencial';
+      return [
+        String(i + 1),
+        fmtDate(m.date),
+        typeLabel,
+        m.partReplaced || '—',
+        m.description || '—',
+        m.workshop || '—',
+        m.vehicleKm ? `${m.vehicleKm.toLocaleString('pt-BR')} km` : '—',
+        m.cost ? `R$ ${m.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
+        m.nextReviewDate ? fmtDate(m.nextReviewDate) : '—',
+      ];
+    });
+
+  autoTable(doc, {
+    startY: (doc as any).lastAutoTable.finalY + 10,
+    head: [['#', 'Data', 'Tipo', 'Peça', 'Descrição', 'Oficina', 'KM', 'Custo', 'Próx. Revisão']],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 7, fontStyle: 'bold' },
+    styles: { fontSize: 7, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [240, 245, 250] },
+    margin: { left: 14, right: 14, bottom: 35 },
+  });
+
+  const totalPages = doc.getNumberOfPages();
+  const totalsStr = `Total: ${filtered.length} manutenções | Custo: R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(doc, i, totalPages, code, i === totalPages ? totalsStr : undefined);
+  }
+
+  doc.save(`sitras_${code}.pdf`);
+  return true;
+}
+
 // Legacy compat
 export async function exportTripsPDF(trips: Trip[], title: string) {
   await buildDoc({ trips, vehicles: [], drivers: [], patients: [], title, subtitle: '', userName: 'Sistema' });
