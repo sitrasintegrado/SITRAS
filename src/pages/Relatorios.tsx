@@ -41,6 +41,7 @@ const Relatorios = () => {
   const [consolTo, setConsolTo] = useState(today);
   const [maintFrom, setMaintFrom] = useState(today);
   const [maintTo, setMaintTo] = useState(today);
+  const [maintVehicleId, setMaintVehicleId] = useState('all');
 
   const noData = () => toast({ title: 'Sem dados', description: 'Nenhum registro encontrado para os filtros selecionados.', variant: 'destructive' });
 
