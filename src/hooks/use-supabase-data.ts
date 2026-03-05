@@ -90,7 +90,7 @@ export function useDrivers() {
   useEffect(() => { fetch(); }, [fetch]);
 
   const save = async (d: Omit<Driver, 'id'>) => {
-    await supabase.from('drivers').insert({ name: d.name, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null });
+    await supabase.from('drivers').insert({ name: d.name, cpf: d.cpf, phone: d.phone, cnh: d.cnh, cnh_category: d.cnhCategory, cnh_expiry: d.cnhExpiry || null } as any);
     await fetch();
   };
 
