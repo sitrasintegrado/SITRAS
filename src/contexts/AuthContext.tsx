@@ -17,6 +17,7 @@ interface AuthContextType {
   canDeleteTrips: boolean;
   canManageUsers: boolean;
   canManageSettings: boolean;
+  canSetMotorista: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     canDeleteTrips: isAdmin,
     canManageUsers: isAdmin,
     canManageSettings: isAdmin,
+    canSetMotorista: isAdmin
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

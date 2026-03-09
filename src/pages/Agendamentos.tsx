@@ -1,19 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Trip, TripPassenger } from '@/types';
+import { Trip } from '@/types';
 import { useTrips, useVehicles, useDrivers, usePatients } from '@/hooks/use-supabase-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Trash2, AlertTriangle, Ban } from 'lucide-react';
+import { Plus, Pencil, Trash2, Ban } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import DialogAgendamentos from '@/components/Dialogs/DialogAgendamentos';
+import OccupancyBar from '@/components/OccupancyBar';
 
 const emptyTrip: Omit<Trip, 'id'> = {
   date: new Date().toISOString().split('T')[0],
@@ -25,33 +22,6 @@ const emptyTrip: Omit<Trip, 'id'> = {
   passengers: [],
   notes: '',
   status: 'Confirmada',
-};
-
-/** Occupancy bar component */
-const OccupancyBar = ({ used, total }: { used: number; total: number }) => {
-  const pct = total > 0 ? Math.round((used / total) * 100) : 0;
-  const color =
-    pct >= 100 ? 'bg-destructive' :
-    pct >= 75 ? 'bg-warning' :
-    'bg-secondary';
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Ocupação</span>
-        <span className="font-semibold">
-          {used}/{total} vagas ({pct}%)
-          {pct >= 100 && <span className="ml-1 text-destructive font-bold">LOTADO</span>}
-        </span>
-      </div>
-      <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${color}`}
-          style={{ width: `${Math.min(pct, 100)}%` }}
-        />
-      </div>
-    </div>
-  );
 };
 
 const Agendamentos = () => {
@@ -83,38 +53,8 @@ const Agendamentos = () => {
   const available = currentVehicle ? currentVehicle.capacity - usedSeats : 0;
   const isFull = currentVehicle ? usedSeats >= currentVehicle.capacity : false;
 
-  // Calculate occupancy for each vehicle across all trips on the same date
-  const vehicleOccupancyOnDate = useMemo(() => {
-    const map = new Map<string, number>();
-    trips.forEach(t => {
-      if (t.date === form.date && t.status !== 'Cancelada' && t.id !== editId) {
-        const seats = t.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
-        map.set(t.vehicleId, (map.get(t.vehicleId) || 0) + seats);
-      }
-    });
-    return map;
-  }, [trips, form.date, editId]);
-
   const openNew = () => { setEditId(null); setForm(emptyTrip); setDialogOpen(true); };
   const openEdit = (t: Trip) => { setEditId(t.id); setForm({ ...t }); setDialogOpen(true); };
-
-  const handleSave = async () => {
-    if (!form.destination || !form.vehicleId || !form.driverId) {
-      toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' });
-      return;
-    }
-    if (currentVehicle && usedSeats > currentVehicle.capacity) {
-      toast({ title: 'Capacidade do veículo excedida!', description: `Máximo: ${currentVehicle.capacity} vagas`, variant: 'destructive' });
-      return;
-    }
-    if (editId) {
-      await update(editId, form);
-    } else {
-      await save(form);
-    }
-    setDialogOpen(false);
-    toast({ title: editId ? 'Viagem atualizada' : 'Viagem criada' });
-  };
 
   const handleDelete = async (id: string) => {
     await remove(id);
@@ -129,18 +69,6 @@ const Agendamentos = () => {
       if (available <= 0) { toast({ title: 'Veículo lotado!', description: 'Não é possível adicionar mais passageiros.', variant: 'destructive' }); return; }
       setForm({ ...form, passengers: [...form.passengers, { patientId, hasCompanion: false }] });
     }
-  };
-
-  const toggleCompanion = (patientId: string) => {
-    const passenger = form.passengers.find(p => p.patientId === patientId);
-    if (!passenger) return;
-    if (!passenger.hasCompanion && available <= 0) { toast({ title: 'Sem vagas para acompanhante', variant: 'destructive' }); return; }
-    setForm({
-      ...form,
-      passengers: form.passengers.map(p =>
-        p.patientId === patientId ? { ...p, hasCompanion: !p.hasCompanion } : p
-      ),
-    });
   };
 
   const statusColor = (s: string) => {
@@ -192,7 +120,7 @@ const Agendamentos = () => {
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      {trip.date} {trip.departureTime} — {trip.destination}
+                      {trip.date.split("-").reverse().join('/')} {"    "} {trip.departureTime} — {trip.destination}
                       {full && <Ban className="h-4 w-4 text-destructive" />}
                     </CardTitle>
                     <div className="flex items-center gap-2">
@@ -224,109 +152,16 @@ const Agendamentos = () => {
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editId ? 'Editar Viagem' : 'Nova Viagem'}</DialogTitle></DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Data</Label><Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
-              <div><Label>Horário de saída</Label><Input type="time" value={form.departureTime} onChange={e => setForm({ ...form, departureTime: e.target.value })} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Destino</Label><Input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} placeholder="Município" /></div>
-              <div><Label>Local da consulta</Label><Input value={form.consultLocation} onChange={e => setForm({ ...form, consultLocation: e.target.value })} placeholder="Hospital/Clínica" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Veículo</Label>
-                <Select value={form.vehicleId} onValueChange={v => setForm({ ...form, vehicleId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {vehicles.filter(v => v.status === 'Ativo').map(v => {
-                      const otherSeats = vehicleOccupancyOnDate.get(v.id) || 0;
-                      const vehicleFull = otherSeats >= v.capacity;
-                      return (
-                        <SelectItem key={v.id} value={v.id} disabled={vehicleFull}>
-                          {v.type} - {v.plate} ({v.capacity - otherSeats}/{v.capacity} vagas)
-                          {vehicleFull && ' — LOTADO'}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Motorista</Label>
-                <Select value={form.driverId} onValueChange={v => setForm({ ...form, driverId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Confirmada">Confirmada</SelectItem>
-                  <SelectItem value="Cancelada">Cancelada</SelectItem>
-                  <SelectItem value="Concluída">Concluída</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {currentVehicle && (
-              <div className="rounded-lg border p-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Pacientes</Label>
-                  {isFull && (
-                    <Badge variant="destructive" className="flex items-center gap-1">
-                      <Ban className="h-3 w-3" /> Veículo Lotado
-                    </Badge>
-                  )}
-                </div>
-                <OccupancyBar used={usedSeats} total={currentVehicle.capacity} />
-                <div className="max-h-48 overflow-y-auto space-y-2">
-                  {patients.map(pat => {
-                    const isSelected = form.passengers.some(p => p.patientId === pat.id);
-                    const passenger = form.passengers.find(p => p.patientId === pat.id);
-                    return (
-                      <div key={pat.id} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => togglePassenger(pat.id)}
-                            disabled={!isSelected && isFull}
-                          />
-                          <span className={`text-sm ${!isSelected && isFull ? 'text-muted-foreground' : ''}`}>{pat.name}</span>
-                          <span className="text-xs text-muted-foreground">{pat.cpf}</span>
-                        </div>
-                        {isSelected && (
-                          <div className="flex items-center gap-1">
-                            <Checkbox
-                              checked={passenger?.hasCompanion}
-                              onCheckedChange={() => toggleCompanion(pat.id)}
-                              disabled={!passenger?.hasCompanion && available <= 0}
-                            />
-                            <span className="text-xs text-muted-foreground">Acompanhante</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {patients.length === 0 && <p className="text-sm text-muted-foreground">Cadastre pacientes primeiro.</p>}
-                </div>
-              </div>
-            )}
-
-            <div><Label>Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={currentVehicle ? usedSeats > currentVehicle.capacity : false}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DialogAgendamentos 
+        setForm={setForm} 
+        currentVehicle={currentVehicle} 
+        dialogOpen={dialogOpen}
+        editId={editId} 
+        form={form} 
+        isFull={isFull}
+        setDialogOpen={setDialogOpen}
+        usedSeats={usedSeats}
+      />
     </div>
   );
 };
