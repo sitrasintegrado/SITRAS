@@ -38,15 +38,17 @@ const Agendamentos = () => {
   const [dateFilter, setDateFilter] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [driverFilter, setDriverFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const filtered = useMemo(() => {
     return trips.filter(t => {
       if (dateFilter && t.date !== dateFilter) return false;
       if (vehicleFilter !== 'all' && t.vehicleId !== vehicleFilter) return false;
       if (driverFilter !== 'all' && t.driverId !== driverFilter) return false;
+      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       return true;
     });
-  }, [trips, dateFilter, vehicleFilter, driverFilter]);
+  }, [trips, dateFilter, vehicleFilter, driverFilter, statusFilter]);
 
   const currentVehicle = vehicles.find(v => v.id === form.vehicleId);
   const usedSeats = form.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
@@ -101,6 +103,16 @@ const Agendamentos = () => {
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="Confirmada">Confirmada</SelectItem>
+            <SelectItem value="Cancelada">Cancelada</SelectItem>
+            <SelectItem value="Concluída">Concluída</SelectItem>
+            <SelectItem value="Pendente">Pendente</SelectItem>
           </SelectContent>
         </Select>
       </div>

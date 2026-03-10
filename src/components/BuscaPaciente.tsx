@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Input } from "@/components/ui/input"
 import { usePatients } from '@/hooks/use-supabase-data';
-
-export interface Patient {
-  id: string; // Mantido como string de acordo com a sua interface
-  name: string;
-  cpf: string;
-  phone: string;
-  address: string;
-  notes: string;
-}
+import { Patient } from '@/types';
 
 interface BuscaPacienteProps {
   // Alterado para aceitar string (pois na interface Patient o id é string)

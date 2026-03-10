@@ -1,15 +1,32 @@
 import { useMemo, useState } from "react";
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogFooter,} from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue,} from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Ban } from "lucide-react";
-import {useTrips,useVehicles,useDrivers,usePatients,} from "@/hooks/use-supabase-data";
+import {
+  useTrips,
+  useVehicles,
+  useDrivers,
+  usePatients,
+} from "@/hooks/use-supabase-data";
 import { BuscaPaciente } from "@/components/BuscaPaciente"; // novo componente de busca
 import { DialogAgendamento } from "@/types";
 import OccupancyBar from "../OccupancyBar";
@@ -30,8 +47,8 @@ export default function DialogAgendamentos({
   const { trips, save, update, remove } = useTrips();
   const { vehicles } = useVehicles();
   const { drivers } = useDrivers();
-  const { patients } = usePatients();
   const [searchKey, setSearchKey] = useState(0);
+  const [acompanhante, setAcompanhante] = useState(false);
   const available = currentVehicle ? currentVehicle.capacity - usedSeats : 0;
   const vehicleOccupancyOnDate = useMemo(() => {
     const map = new Map<string, number>();
@@ -65,7 +82,10 @@ export default function DialogAgendamentos({
       }
       setForm({
         ...form,
-        passengers: [...form.passengers, { patientId, hasCompanion: false }],
+        passengers: [
+          ...form.passengers,
+          { patientId, hasCompanion: acompanhante },
+        ],
       });
     }
   };
@@ -88,7 +108,10 @@ export default function DialogAgendamentos({
 
     setForm({
       ...form,
-      passengers: [...form.passengers, { patientId: stringId, hasCompanion: false }],
+      passengers: [
+        ...form.passengers,
+        { patientId: stringId, hasCompanion: false },
+      ],
     });
 
     // limpa o campo de busca
@@ -96,7 +119,8 @@ export default function DialogAgendamentos({
   };
 
   const handleSave = async () => {
-    if (!form.destination  ) { // !form.vehicleId
+    if (!form.destination) {
+      // !form.vehicleId
       toast({
         title: "Preencha os campos obrigatórios",
         variant: "destructive",
@@ -195,23 +219,41 @@ export default function DialogAgendamentos({
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vehicles
-                    .filter((v) => v.status === "Ativo")
-                    .map((v) => {
-                      const otherSeats = vehicleOccupancyOnDate.get(v.id) || 0;
-                      const vehicleFull = otherSeats >= v.capacity;
-                      return (
-                        <SelectItem
-                          key={v.id}
-                          value={v.id}
-                          disabled={vehicleFull}
-                        >
-                          {v.type} - {v.plate} ({v.capacity - otherSeats}/
-                          {v.capacity} vagas)
-                          {vehicleFull && " — LOTADO"}
-                        </SelectItem>
-                      );
-                    })}
+                  {canSetMotorista
+                    ? vehicles
+                        .filter((v) => v.status === "Ativo")
+                        .map((v) => {
+                          const otherSeats = vehicleOccupancyOnDate.get(v.id) || 0;
+                          const vehicleFull = otherSeats >= v.capacity;
+                          return (
+                            <SelectItem
+                              key={v.id}
+                              value={v.id}
+                              disabled={vehicleFull}
+                            >
+                              {v.type} - {v.plate} ({v.capacity - otherSeats}/
+                              {v.capacity} vagas)
+                              {vehicleFull && " — LOTADO"}
+                            </SelectItem>
+                          );
+                        })
+                    : vehicles
+                        .filter((v) => v.status === "Ativo" && v.capacity >= 30)
+                        .map((v) => {
+                          const otherSeats = vehicleOccupancyOnDate.get(v.id) || 0;
+                          const vehicleFull = otherSeats >= v.capacity;
+                          return (
+                            <SelectItem
+                              key={v.id}
+                              value={v.id}
+                              disabled={vehicleFull}
+                            >
+                              {v.type} - {v.plate} ({v.capacity - otherSeats}/
+                              {v.capacity} vagas)
+                              {vehicleFull && " — LOTADO"}
+                            </SelectItem>
+                          );
+                        })}
                 </SelectContent>
               </Select>
             </div>
@@ -274,57 +316,22 @@ export default function DialogAgendamentos({
             )}
 
             {/* campo de busca para adicionar passageiros */}
-            <BuscaPaciente key={searchKey} onSelectPaciente={handleAddPaciente.toString} />
-
-            {/* lista de passageiros adicionados */}
-            <div className="max-h-48 overflow-y-auto space-y-2">
-              {form.passengers.map((p) => {
-                const pat = patients.find((x) => x.id === p.patientId);
-                return (
-                  <div
-                    key={p.patientId}
-                    className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">
-                        {pat ? pat.name : p.patientId}
-                      </span>
-                      {pat && (
-                        <span className="text-xs text-muted-foreground">
-                          {pat.cpf}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={p.hasCompanion}
-                        onCheckedChange={() => toggleCompanion(p.patientId)}
-                        disabled={
-                          !p.hasCompanion &&
-                          currentVehicle &&
-                          available <= 0
-                        }
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        Acompanhante
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => togglePassenger(p.patientId)}
-                      >
-                        Remover
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {patients.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Cadastre pacientes primeiro.
-                </p>
-              )}
+            <BuscaPaciente key={searchKey} onSelectPaciente={togglePassenger} />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="acompanhante"
+                checked={acompanhante}
+                // O shadcn pode retornar "indeterminate", então garantimos que seja sempre booleano
+                onCheckedChange={(checked) =>
+                  setAcompanhante(checked === true)
+                }
+              />
+              <Label
+                htmlFor="acompanhante"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Paciente requer acompanhante?
+              </Label>
             </div>
           </div>
 
