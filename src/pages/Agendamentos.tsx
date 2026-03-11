@@ -6,17 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Ban } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import DialogAgendamentos from '@/components/Dialogs/DialogAgendamentos';
 import OccupancyBar from '@/components/OccupancyBar';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Trash2, AlertTriangle, Ban, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Ban, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { exportDriverSchedulePDF } from '@/lib/pdf-export';
+import { Label } from '@/components/ui/label';
 
 const emptyTrip: Omit<Trip, 'id'> = {
   date: new Date().toISOString().split('T')[0],
@@ -146,32 +142,48 @@ const Agendamentos = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44" />
-        <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Veículo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={driverFilter} onValueChange={setDriverFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Motorista" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="Confirmada">Confirmada</SelectItem>
-            <SelectItem value="Cancelada">Cancelada</SelectItem>
-            <SelectItem value="Concluída">Concluída</SelectItem>
-            <SelectItem value="Pendente">Pendente</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col flex-wrap gap-3">
+        <p>Filtros</p>
+        <div className='flex gap-3'>
+          <div>
+            <Label> Data agendada </Label>
+            <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-44" />
+          </div>
+          <div>
+            <Label> Veículo </Label>
+            <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Veículo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          </div>
+          
+          <div>
+            <Label> Motorista </Label>
+            <Select value={driverFilter} onValueChange={setDriverFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Motorista" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          </div>
+          <div>
+            <Label> Status Agendamento </Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="Confirmada">Confirmada</SelectItem>
+              <SelectItem value="Cancelada">Cancelada</SelectItem>
+              <SelectItem value="Concluída">Concluída</SelectItem>
+              <SelectItem value="Pendente">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+          </div>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -184,12 +196,15 @@ const Agendamentos = () => {
             const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
             const capacity = vehicle?.capacity || 0;
             const full = capacity > 0 && seats >= capacity;
+            const firstPassengerName = trip.passengers.length > 0 
+              ? patients.find(p => p.id === trip.passengers[0].patientId)?.name ?? 'Paciente'
+              : 'Sem Paciente Cadastrado';
             return (
               <Card key={trip.id} className={full ? 'border-destructive/50' : ''}>
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      {trip.date.split("-").reverse().join('/')} {"    "} {trip.departureTime} — {trip.destination}
+                      {trip.date.split("-").reverse().join('/')} {"    "} {trip.departureTime} — {firstPassengerName}
                       {full && <Ban className="h-4 w-4 text-destructive" />}
                     </CardTitle>
                     <div className="flex items-center gap-2">

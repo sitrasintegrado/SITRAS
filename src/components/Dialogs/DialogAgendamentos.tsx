@@ -1,32 +1,15 @@
 import { useMemo, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogFooter,} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue,} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Ban } from "lucide-react";
-import {
-  useTrips,
-  useVehicles,
-  useDrivers,
-  usePatients,
-} from "@/hooks/use-supabase-data";
+import {useTrips,useVehicles,useDrivers,usePatients,} from "@/hooks/use-supabase-data";
 import { BuscaPaciente } from "@/components/BuscaPaciente"; // novo componente de busca
 import { DialogAgendamento } from "@/types";
 import OccupancyBar from "../OccupancyBar";
