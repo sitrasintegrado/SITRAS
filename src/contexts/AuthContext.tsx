@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
-export type AppRole = 'admin' | 'gestor' | 'visualizador';
+export type AppRole = 'admin' | 'gestor' | 'visualizador' | 'motorista';
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +18,7 @@ interface AuthContextType {
   canManageUsers: boolean;
   canManageSettings: boolean;
   canSetMotorista: boolean
+  isDriver: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,7 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase deadlock
           setTimeout(() => fetchRole(session.user.id), 0);
         } else {
           setRole(null);
@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = role === 'admin';
   const isGestor = role === 'gestor';
+  const isDriver = role === 'motorista';
 
   const value: AuthContextType = {
     user,
@@ -89,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     canManageUsers: isAdmin,
     canManageSettings: isAdmin,
     canSetMotorista: isAdmin
+    isDriver,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

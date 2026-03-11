@@ -19,28 +19,52 @@ export type Database = {
           cnh: string
           cnh_category: string
           cnh_expiry: string | null
+          cpf: string
           created_at: string
           id: string
           name: string
           phone: string
+          user_id: string | null
         }
         Insert: {
           cnh?: string
           cnh_category?: string
           cnh_expiry?: string | null
+          cpf?: string
           created_at?: string
           id?: string
           name: string
           phone?: string
+          user_id?: string | null
         }
         Update: {
           cnh?: string
           cnh_category?: string
           cnh_expiry?: string | null
+          cpf?: string
           created_at?: string
           id?: string
           name?: string
           phone?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      empresas: {
+        Row: {
+          created_at: string
+          id_empresa: number
+          nome_empresa: string | null
+        }
+        Insert: {
+          created_at?: string
+          id_empresa?: number
+          nome_empresa?: string | null
+        }
+        Update: {
+          created_at?: string
+          id_empresa?: number
+          nome_empresa?: string | null
         }
         Relationships: []
       }
@@ -134,6 +158,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          id_empresa: number | null
         }
         Insert: {
           active?: boolean
@@ -141,6 +166,7 @@ export type Database = {
           email: string
           full_name?: string
           id: string
+          id_empresa?: number | null
         }
         Update: {
           active?: boolean
@@ -148,8 +174,17 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          id_empresa?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
+          },
+        ]
       }
       trip_passengers: {
         Row: {
@@ -303,6 +338,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_drivers_summary: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      get_email_by_cpf: { Args: { _cpf: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -316,7 +359,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "gestor" | "visualizador"
+      app_role: "admin" | "gestor" | "visualizador" | "motorista"
       maintenance_type: "preventiva" | "corretiva" | "emergencial"
       trip_status: "Confirmada" | "Cancelada" | "Concluída"
       vehicle_status: "Ativo" | "Manutenção" | "Inativo"
@@ -448,7 +491,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gestor", "visualizador"],
+      app_role: ["admin", "gestor", "visualizador", "motorista"],
       maintenance_type: ["preventiva", "corretiva", "emergencial"],
       trip_status: ["Confirmada", "Cancelada", "Concluída"],
       vehicle_status: ["Ativo", "Manutenção", "Inativo"],

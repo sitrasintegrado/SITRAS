@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTrips, useVehicles, useDrivers, usePatients } from '@/hooks/use-supabase-data';
+import { useTrips, useVehicles, useDrivers, usePatients, useMaintenances } from '@/hooks/use-supabase-data';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   exportDailyReport,
@@ -8,13 +8,15 @@ import {
   exportPatientReport,
   exportPeriodReport,
   exportConsolidatedReport,
+  exportMaintenanceReport,
+  exportMaintenanceByVehicleReport,
 } from '@/lib/pdf-export';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, CalendarDays, Car, User, Users, BarChart3 } from 'lucide-react';
+import { FileText, Download, CalendarDays, Car, User, Users, BarChart3, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Relatorios = () => {
@@ -24,6 +26,7 @@ const Relatorios = () => {
   const { vehicles } = useVehicles();
   const { drivers } = useDrivers();
   const { patients } = usePatients();
+  const { maintenances } = useMaintenances();
 
   const userName = user?.email || 'Usuário';
   const today = new Date().toISOString().split('T')[0];
@@ -36,8 +39,11 @@ const Relatorios = () => {
   const [periodTo, setPeriodTo] = useState(today);
   const [consolFrom, setConsolFrom] = useState(today);
   const [consolTo, setConsolTo] = useState(today);
+  const [maintFrom, setMaintFrom] = useState(today);
+  const [maintTo, setMaintTo] = useState(today);
+  const [maintVehicleId, setMaintVehicleId] = useState('all');
 
-  const noData = () => toast({ title: 'Sem dados', description: 'Nenhuma viagem encontrada para os filtros selecionados.', variant: 'destructive' });
+  const noData = () => toast({ title: 'Sem dados', description: 'Nenhum registro encontrado para os filtros selecionados.', variant: 'destructive' });
 
   const handleDaily = async () => {
     if (!await exportDailyReport(trips, vehicles, drivers, patients, userName, dailyDate)) noData();
@@ -64,6 +70,15 @@ const Relatorios = () => {
 
   const handleConsolidated = async () => {
     if (!await exportConsolidatedReport(trips, vehicles, drivers, patients, userName, consolFrom, consolTo)) noData();
+  };
+
+  const handleMaintenance = async () => {
+    if (!await exportMaintenanceReport(maintenances, vehicles, userName, maintFrom, maintTo)) noData();
+  };
+
+  const handleMaintenanceByVehicle = async () => {
+    if (maintVehicleId === 'all') { toast({ title: 'Selecione um veículo', variant: 'destructive' }); return; }
+    if (!await exportMaintenanceByVehicleReport(maintenances, vehicles, userName, maintVehicleId)) noData();
   };
 
   return (
@@ -158,6 +173,36 @@ const Relatorios = () => {
               <div><Label className="text-xs">Até</Label><Input type="date" value={consolTo} onChange={e => setConsolTo(e.target.value)} /></div>
             </div>
             <Button onClick={handleConsolidated} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
+          </CardContent>
+        </Card>
+
+        {/* Manutenção da Frota */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4 text-primary" /> Manutenção da Frota</CardTitle>
+            <CardDescription className="text-xs">Custos, histórico por veículo e tipos de manutenção</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-xs">De</Label><Input type="date" value={maintFrom} onChange={e => setMaintFrom(e.target.value)} /></div>
+              <div><Label className="text-xs">Até</Label><Input type="date" value={maintTo} onChange={e => setMaintTo(e.target.value)} /></div>
+            </div>
+            <Button onClick={handleMaintenance} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
+          </CardContent>
+        </Card>
+
+        {/* Manutenção por Veículo */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4 text-primary" /> Manutenção por Veículo</CardTitle>
+            <CardDescription className="text-xs">Histórico completo de manutenção de um veículo</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={maintVehicleId} onValueChange={setMaintVehicleId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.type} - {v.plate}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button onClick={handleMaintenanceByVehicle} className="w-full"><Download className="h-4 w-4 mr-1" /> Exportar PDF</Button>
           </CardContent>
         </Card>
       </div>

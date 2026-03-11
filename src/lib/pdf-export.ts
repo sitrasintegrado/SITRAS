@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Trip, Vehicle, Driver, Patient } from '@/types';
+import { Trip, Vehicle, Driver, Patient, Maintenance } from '@/types';
 import logoUrl from '@/assets/logo.png';
 
 // ── Logo cache ──
@@ -81,7 +81,7 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, code: string, us
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Sistema Integrado de Transporte Sanitário', textStartX, 20);
+  doc.text('Sistema Integrado de Transporte da Saúde', textStartX, 20);
 
   // Report title right-aligned
   doc.setFontSize(11);
@@ -120,7 +120,7 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number, code: string
   }
 
   doc.text(`${code}`, 14, h - 12);
-  doc.text('SITRAS Saúde — Documento gerado eletronicamente', w / 2, h - 12, { align: 'center' });
+  doc.text('SITRAS — Documento gerado eletronicamente', w / 2, h - 12, { align: 'center' });
   doc.text(`Página ${pageNum} de ${totalPages}`, w - 14, h - 12, { align: 'right' });
 
   doc.setDrawColor(0, 0, 0);
@@ -330,6 +330,289 @@ export async function exportConsolidatedReport(
   }
 
   doc.save(`sitras_${code}.pdf`);
+  return true;
+}
+
+// ══════════════════════════════════════════════
+// MAINTENANCE REPORT
+// ══════════════════════════════════════════════
+
+export async function exportMaintenanceReport(
+  maintenances: Maintenance[], vehicles: Vehicle[], userName: string, dateFrom: string, dateTo: string,
+) {
+  const filtered = maintenances.filter(m => m.date >= dateFrom && m.date <= dateTo);
+  if (!filtered.length) return false;
+
+  const code = genCode();
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const logo = await getLogoBase64();
+
+  addHeader(doc, 'Relatório de Manutenção da Frota', `Período: ${fmtDate(dateFrom)} a ${fmtDate(dateTo)}`, code, userName, logo);
+
+  // ── Summary indicators ──
+  const totalCost = filtered.reduce((s, m) => s + (m.cost || 0), 0);
+  const byType = { preventiva: 0, corretiva: 0, emergencial: 0 };
+  filtered.forEach(m => { byType[m.type] = (byType[m.type] || 0) + 1; });
+  const uniqueVehicles = new Set(filtered.map(m => m.vehicleId)).size;
+
+  autoTable(doc, {
+    startY: 48,
+    head: [['Indicador', 'Valor']],
+    body: [
+      ['Total de Manutenções', String(filtered.length)],
+      ['Preventivas', String(byType.preventiva)],
+      ['Corretivas', String(byType.corretiva)],
+      ['Emergenciais', String(byType.emergencial)],
+      ['Veículos Atendidos', String(uniqueVehicles)],
+      ['Custo Total', `R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 8 },
+    styles: { fontSize: 8 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+    margin: { left: 14, right: 160, bottom: 35 },
+  });
+
+  // ── Detailed list ──
+  const rows = filtered
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((m, i) => {
+      const v = vehicles.find(x => x.id === m.vehicleId);
+      const typeLabel = m.type === 'preventiva' ? 'Preventiva' : m.type === 'corretiva' ? 'Corretiva' : 'Emergencial';
+      return [
+        String(i + 1),
+        fmtDate(m.date),
+        v ? `${v.type} ${v.plate}` : '—',
+        typeLabel,
+        m.partReplaced || '—',
+        m.description || '—',
+        m.workshop || '—',
+        m.vehicleKm ? `${m.vehicleKm.toLocaleString('pt-BR')} km` : '—',
+        m.cost ? `R$ ${m.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
+        m.nextReviewDate ? fmtDate(m.nextReviewDate) : '—',
+      ];
+    });
+
+  autoTable(doc, {
+    startY: (doc as any).lastAutoTable.finalY + 10,
+    head: [['#', 'Data', 'Veículo', 'Tipo', 'Peça', 'Descrição', 'Oficina', 'KM', 'Custo', 'Próx. Revisão']],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 7, fontStyle: 'bold' },
+    styles: { fontSize: 7, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [240, 245, 250] },
+    margin: { left: 14, right: 14, bottom: 35 },
+  });
+
+  // ── Cost by vehicle ──
+  const costByVehicle = new Map<string, { count: number; cost: number }>();
+  filtered.forEach(m => {
+    const v = vehicles.find(x => x.id === m.vehicleId);
+    const label = v ? `${v.type} ${v.plate}` : 'Sem veículo';
+    const entry = costByVehicle.get(label) || { count: 0, cost: 0 };
+    entry.count++;
+    entry.cost += m.cost || 0;
+    costByVehicle.set(label, entry);
+  });
+
+  autoTable(doc, {
+    startY: (doc as any).lastAutoTable.finalY + 10,
+    head: [['Veículo', 'Manutenções', 'Custo Total']],
+    body: Array.from(costByVehicle.entries())
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .map(([label, data]) => [label, String(data.count), `R$ ${data.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]),
+    theme: 'striped',
+    headStyles: { fillColor: [34, 139, 34], fontSize: 8 },
+    styles: { fontSize: 8 },
+    margin: { left: 14, right: 14, bottom: 35 },
+  });
+
+  const totalPages = doc.getNumberOfPages();
+  const totalsStr = `Total: ${filtered.length} manutenções | Custo: R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Veículos: ${uniqueVehicles}`;
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(doc, i, totalPages, code, i === totalPages ? totalsStr : undefined);
+  }
+
+  doc.save(`sitras_${code}.pdf`);
+  return true;
+}
+
+export async function exportMaintenanceByVehicleReport(
+  maintenances: Maintenance[], vehicles: Vehicle[], userName: string, vehicleId: string,
+) {
+  const filtered = maintenances.filter(m => m.vehicleId === vehicleId);
+  if (!filtered.length) return false;
+
+  const v = vehicles.find(x => x.id === vehicleId);
+  const vLabel = v ? `${v.type} ${v.modelo} — Placa: ${v.plate}` : 'Veículo não encontrado';
+
+  const code = genCode();
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const logo = await getLogoBase64();
+
+  addHeader(doc, 'Manutenção por Veículo', vLabel, code, userName, logo);
+
+  const totalCost = filtered.reduce((s, m) => s + (m.cost || 0), 0);
+  const byType = { preventiva: 0, corretiva: 0, emergencial: 0 };
+  filtered.forEach(m => { byType[m.type] = (byType[m.type] || 0) + 1; });
+
+  autoTable(doc, {
+    startY: 48,
+    head: [['Indicador', 'Valor']],
+    body: [
+      ['Total de Manutenções', String(filtered.length)],
+      ['Preventivas', String(byType.preventiva)],
+      ['Corretivas', String(byType.corretiva)],
+      ['Emergenciais', String(byType.emergencial)],
+      ['Custo Total', `R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 8 },
+    styles: { fontSize: 8 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+    margin: { left: 14, right: 160, bottom: 35 },
+  });
+
+  const rows = filtered
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((m, i) => {
+      const typeLabel = m.type === 'preventiva' ? 'Preventiva' : m.type === 'corretiva' ? 'Corretiva' : 'Emergencial';
+      return [
+        String(i + 1),
+        fmtDate(m.date),
+        typeLabel,
+        m.partReplaced || '—',
+        m.description || '—',
+        m.workshop || '—',
+        m.vehicleKm ? `${m.vehicleKm.toLocaleString('pt-BR')} km` : '—',
+        m.cost ? `R$ ${m.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
+        m.nextReviewDate ? fmtDate(m.nextReviewDate) : '—',
+      ];
+    });
+
+  autoTable(doc, {
+    startY: (doc as any).lastAutoTable.finalY + 10,
+    head: [['#', 'Data', 'Tipo', 'Peça', 'Descrição', 'Oficina', 'KM', 'Custo', 'Próx. Revisão']],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 7, fontStyle: 'bold' },
+    styles: { fontSize: 7, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [240, 245, 250] },
+    margin: { left: 14, right: 14, bottom: 35 },
+  });
+
+  const totalPages = doc.getNumberOfPages();
+  const totalsStr = `Total: ${filtered.length} manutenções | Custo: R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(doc, i, totalPages, code, i === totalPages ? totalsStr : undefined);
+  }
+
+  doc.save(`sitras_${code}.pdf`);
+  return true;
+}
+
+// ══════════════════════════════════════════════
+// DRIVER SCHEDULE PDF (Agenda do Motorista)
+// ══════════════════════════════════════════════
+
+interface DriverScheduleData {
+  driverName: string;
+  vehicleLabel: string;
+  date: string;
+  trips: {
+    departureTime: string;
+    destination: string;
+    consultLocation: string;
+    passengers: { name: string; hasCompanion: boolean }[];
+    notes: string;
+    status: string;
+  }[];
+  userName: string;
+}
+
+export async function exportDriverSchedulePDF(data: DriverScheduleData) {
+  if (!data.trips.length) return false;
+
+  const code = genCode();
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const w = doc.internal.pageSize.getWidth();
+  const logo = await getLogoBase64();
+
+  addHeader(doc, 'Agenda do Motorista', `Data: ${fmtDate(data.date)} — Motorista: ${data.driverName} — Veículo: ${data.vehicleLabel}`, code, data.userName, logo);
+
+  // Trip table
+  const rows = data.trips.map((t, i) => {
+    const paxNames = t.passengers.map(p => p.name).join(', ') || '—';
+    const companions = t.passengers.filter(p => p.hasCompanion).map(p => p.name).join(', ') || 'Nenhum';
+    return [
+      String(i + 1),
+      t.departureTime || '—',
+      paxNames,
+      t.destination || '—',
+      t.consultLocation || '—',
+      companions,
+      t.notes || '—',
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 50,
+    head: [['#', 'Horário', 'Paciente(s)', 'Destino', 'Local de Saída', 'Acompanhante(s)', 'Observações']],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 64, 120], fontSize: 8, fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 3 },
+    alternateRowStyles: { fillColor: [240, 245, 250] },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      1: { cellWidth: 18 },
+      6: { cellWidth: 30 },
+    },
+    margin: { left: 14, right: 14, bottom: 60 },
+  });
+
+  // Signature area on last page
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const h = doc.internal.pageSize.getHeight();
+
+    if (i === totalPages) {
+      const sigY = Math.max((doc as any).lastAutoTable?.finalY + 25 || h - 55, h - 55);
+
+      // Signature lines
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.3);
+
+      // Driver signature
+      doc.line(14, sigY, 90, sigY);
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text('Assinatura do Motorista', 52, sigY + 4, { align: 'center' });
+      doc.setFontSize(7);
+      doc.text(data.driverName, 52, sigY + 8, { align: 'center' });
+
+      // Fleet manager signature
+      doc.line(w - 90, sigY, w - 14, sigY);
+      doc.setFontSize(8);
+      doc.text('Responsável da Frota', w - 52, sigY + 4, { align: 'center' });
+    }
+
+    // Footer
+    doc.setDrawColor(30, 64, 120);
+    doc.setLineWidth(0.5);
+    const h2 = doc.internal.pageSize.getHeight();
+    doc.line(14, h2 - 18, w - 14, h2 - 18);
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    doc.text(code, 14, h2 - 12);
+    doc.text('SITRAS — Documento gerado eletronicamente', w / 2, h2 - 12, { align: 'center' });
+    doc.text(`Página ${i} de ${totalPages}`, w - 14, h2 - 12, { align: 'right' });
+  }
+
+  doc.save(`sitras_agenda_${code}.pdf`);
   return true;
 }
 

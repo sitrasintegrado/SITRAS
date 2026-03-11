@@ -36,6 +36,7 @@ export interface Maintenance {
 export interface Driver {
   id: string;
   name: string;
+  cpf: string;
   phone: string;
   cnh: string;
   cnhCategory: string;
