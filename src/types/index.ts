@@ -58,5 +58,27 @@ export interface Trip {
   driverId: string;
   passengers: TripPassenger[];
   notes: string;
-  status: 'Confirmada' | 'Cancelada' | 'Concluída';
+  status: 'Confirmada' | 'Cancelada' | 'Concluída' | 'Pendente';
+}
+
+const emptyTrip: Omit<Trip, 'id'> = {
+  date: new Date().toISOString().split('T')[0],
+  departureTime: '06:00',
+  destination: '',
+  consultLocation: '',
+  vehicleId: '',
+  driverId: '',
+  passengers: [],
+  notes: '',
+  status: 'Confirmada',
+};
+export interface DialogAgendamento {
+  form: typeof emptyTrip;
+  dialogOpen: boolean;
+  setDialogOpen: (boolean) => void;
+  setForm: (form: typeof emptyTrip) => void;
+  currentVehicle: Vehicle;
+  editId: string | null;
+  isFull: boolean;
+  usedSeats: number;
 }
