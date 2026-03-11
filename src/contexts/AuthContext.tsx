@@ -17,7 +17,7 @@ interface AuthContextType {
   canDeleteTrips: boolean;
   canManageUsers: boolean;
   canManageSettings: boolean;
-  canSetMotorista: boolean
+  canSetMotorista: boolean;
   isDriver: boolean;
 }
 
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     canDeleteTrips: isAdmin,
     canManageUsers: isAdmin,
     canManageSettings: isAdmin,
-    canSetMotorista: isAdmin
+    canSetMotorista: isAdmin,
     isDriver,
   };
 
