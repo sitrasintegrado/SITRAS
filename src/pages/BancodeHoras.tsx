@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import { Input } from "@/components/ui/input"
 import { useDrivers , useBancoHoras } from '@/hooks/use-supabase-data' 
+import { toast } from 'sonner'
 
 export default function ControleBancoHoras() {
   // 1. Estados locais para a interface e formulário
@@ -11,13 +12,7 @@ export default function ControleBancoHoras() {
   const [descricao, setDescricao] = useState('')
   const [dataRegistro, setDataRegistro] = useState(new Date().toISOString().split('T')[0])
   const [salvando, setSalvando] = useState(false)
-
-  // 2. Usando nossos Custom Hooks!
-  // Busca todos os motoristas para preencher o select
   const { drivers, loading: loadingDrivers } = useDrivers()
-  
-  // Busca o histórico apenas do motorista selecionado. 
-  // Se o ID for vazio, o hook retorna um array vazio automaticamente.
   const { registros, loading: loadingRegistros, save: salvarRegistro } = useBancoHoras(motoristaSelecionado)
 
   // 3. Calculando o Saldo (useMemo garante que só recalcula se os registros mudarem)
@@ -29,34 +24,49 @@ export default function ControleBancoHoras() {
     }, 0)
   }, [registros])
 
+  // Função que transforma 1.75 em "01h45m"
+    function decimalParaRelogio(decimal: number) {
+    // Pega o valor absoluto para evitar problemas com saldos negativos
+    const valorAbsoluto = Math.abs(decimal);
+    
+    // Extrai apenas a parte inteira (as horas)
+    const horas = Math.floor(valorAbsoluto);
+    
+    // Pega o que sobrou (ex: 0.75) e multiplica por 60 para achar os minutos
+    const minutos = Math.round((valorAbsoluto - horas) * 60);
+
+    // Formata com dois dígitos (ex: "01" em vez de "1")
+    const horasFormatadas = String(horas).padStart(2, '0');
+    const minutosFormatados = String(minutos).padStart(2, '0');
+
+    return `${horasFormatadas}h${minutosFormatados}m`;
+    }
+
   // 4. Função para enviar o formulário
   async function handleSalvarRegistro(e: React.FormEvent) {
     e.preventDefault()
-    if (!motoristaSelecionado || !horas || !descricao) {
-      return alert("Preencha todos os campos!")
-    }
+    if (!motoristaSelecionado || !horas || !descricao) return alert("Preencha todos os campos!")
 
     setSalvando(true)
-    try {
-      // Chama a função save do nosso hook, passando o objeto no formato camelCase
-      await salvarRegistro({
-        idMotorista: motoristaSelecionado, // Agora é UUID (string)
-        tipo,
-        quantidadeHoras: Number(horas.replace(',', '.')), 
-        descricao,
-        dataRegistro
-      })
+        try {
+            // Quebra o '01:45' em horas ('01') e minutos ('45')
+            const [h, m] = horas.split(':');
+            
+            // Converte para decimal: 1 + (45 / 60) = 1.75
+            const horasDecimais = Number(h) + (Number(m) / 60);
 
-      // Limpa os campos do formulário após o sucesso
-      setHoras('')
-      setDescricao('')
-    } catch (error) {
-      console.error("Erro ao salvar:", error)
-      alert("Ocorreu um erro ao salvar o registro.")
-    } finally {
-      setSalvando(false)
+            await salvarRegistro({
+            idMotorista: motoristaSelecionado,
+            tipo,
+            quantidadeHoras: horasDecimais, // <-- Salva o valor convertido no banco!
+            descricao,
+            dataRegistro
+            })
+
+            setHoras('')
+            setDescricao('')
+        } catch (error) { toast.error(error) }
     }
-  }
 
   return (
     <div className='space-y-6'>
@@ -113,12 +123,15 @@ export default function ControleBancoHoras() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Qtd. Horas (Ex: 1.5 para 1h30)</label>
-              <Input 
-                type="number" step="0.5" min="0.1" required 
-                value={horas} onChange={e => setHoras(e.target.value)} 
-                placeholder="0.0" 
-              />
+              <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Tempo (HH:MM)</label>
+                    <Input 
+                        type="time" 
+                        required 
+                        value={horas} 
+                        onChange={e => setHoras(e.target.value)} 
+                    />
+                </div>
             </div>
 
             <div>
@@ -155,10 +168,10 @@ export default function ControleBancoHoras() {
           <>
             {/* Display do Saldo */}
             <div className={`p-6 rounded-lg shadow-sm border text-center transition-colors ${saldo >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-              <h2 className="text-lg text-gray-600 font-medium">Saldo Atual de Horas</h2>
-              <p className={`text-5xl font-extrabold mt-2 ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {saldo > 0 ? '+' : ''}{saldo.toFixed(2)}h
-              </p>
+                <h2 className="text-lg text-gray-600 font-medium">Saldo Atual de Horas</h2>
+                <p className={`text-5xl font-extrabold mt-2 ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {saldo > 0 ? '+' : saldo < 0 ? '-' : ''} {decimalParaRelogio(saldo)}
+                </p>
             </div>
 
             {/* Tabela de Histórico */}
@@ -182,14 +195,15 @@ export default function ControleBancoHoras() {
                     <tbody className="divide-y divide-gray-100">
                       {registros.map(reg => (
                         <tr key={reg.idRegistro} className="hover:bg-gray-50 transition-colors">
-                          <td className="p-3 text-gray-600">
-                            {/* O JS precisa do 'T00:00:00' para não errar o fuso horário em datas YYYY-MM-DD */}
-                            {new Date(`${reg.dataRegistro}T00:00:00`).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="p-3 font-medium text-gray-800">{reg.descricao}</td>
-                          <td className={`p-3 text-right font-bold ${reg.tipo === 'credito' ? 'text-green-600' : 'text-red-600'}`}>
-                            {reg.tipo === 'credito' ? '+' : '-'}{reg.quantidadeHoras.toFixed(2)}
-                          </td>
+                            <td className="p-3 text-gray-600">
+                                {/* O JS precisa do 'T00:00:00' para não errar o fuso horário em datas YYYY-MM-DD */}
+                                {new Date(`${reg.dataRegistro}T00:00:00`).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="p-3 font-medium text-gray-800">{reg.descricao}</td>
+                            <td className={`p-3 text-right font-bold ${reg.tipo === 'credito' ? 'text-green-600' : 'text-red-600'}`}>
+                                {/* Aplica a função aqui também! */}
+                                {reg.tipo === 'credito' ? '+' : '-'} {decimalParaRelogio(reg.quantidadeHoras)}
+                            </td>
                         </tr>
                       ))}
                     </tbody>
