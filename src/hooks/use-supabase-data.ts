@@ -242,3 +242,93 @@ export function useMaintenances() {
 
   return { maintenances, loading, save, update, remove, refetch: fetch };
 }
+
+export interface RegistroHoras {
+  idRegistro: number;
+  idMotorista: string; // UUID
+  tipo: 'credito' | 'debito';
+  quantidadeHoras: number;
+  descricao: string;
+  dataRegistro: string;
+  createdAt?: string;
+}
+
+export function useBancoHoras(driverId?: string) {
+  const [registros, setRegistros] = useState<RegistroHoras[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 2. Função de Busca (Fetch)
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    
+    // Inicia a query ordenando do mais recente para o mais antigo
+    let query = supabase
+      .from('banco_horas')
+      .select('*')
+      .order('data_registro', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    // Se passarmos o ID de um motorista específico, ele filtra a busca
+    if (driverId) {
+      query = query.eq('id_motorista', driverId);
+    }
+
+    const { data, error } = await query;
+
+    if (data && !error) {
+      // Mapeia os dados do banco (snake_case) para o formato do TypeScript (camelCase)
+      setRegistros(data.map(r => ({
+        idRegistro: r.id_registro,
+        idMotorista: r.id_motorista,
+        tipo: r.tipo,
+        quantidadeHoras: Number(r.quantidade_horas), // Garante que volta como número
+        descricao: r.descricao,
+        dataRegistro: r.data_registro,
+        createdAt: r.created_at,
+      })));
+    } else {
+      // Se der erro ou for bloqueado por RLS, zera a lista
+      setRegistros([]);
+      console.error("Erro ao buscar banco de horas:", error);
+    }
+    
+    setLoading(false);
+  }, [driverId]); // Refaz a função se o ID do motorista mudar
+
+  useEffect(() => { 
+    fetch(); 
+  }, [fetch]);
+
+  // 3. Função para Salvar um novo registro
+  const save = async (r: Omit<RegistroHoras, 'idRegistro' | 'createdAt'>) => {
+    // Mapeia do TypeScript (camelCase) para o Banco (snake_case)
+    await supabase.from('banco_horas').insert({
+      id_motorista: r.idMotorista,
+      tipo: r.tipo,
+      quantidade_horas: r.quantidadeHoras,
+      descricao: r.descricao,
+      data_registro: r.dataRegistro
+    });
+    await fetch(); // Recarrega a lista após salvar
+  };
+
+  // 4. Função para Atualizar um registro existente
+  const update = async (id: number, r: Omit<RegistroHoras, 'idRegistro' | 'createdAt'>) => {
+    await supabase.from('banco_horas').update({
+      id_motorista: r.idMotorista,
+      tipo: r.tipo,
+      quantidade_horas: r.quantidadeHoras,
+      descricao: r.descricao,
+      data_registro: r.dataRegistro
+    }).eq('id_registro', id);
+    await fetch();
+  };
+
+  // 5. Função para Deletar um registro (caso tenham lançado errado)
+  const remove = async (id: number) => {
+    await supabase.from('banco_horas').delete().eq('id_registro', id);
+    await fetch();
+  };
+
+  return { registros, loading, save, update, remove, refetch: fetch };
+}

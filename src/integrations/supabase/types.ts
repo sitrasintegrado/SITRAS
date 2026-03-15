@@ -333,6 +333,44 @@ export type Database = {
         }
         Relationships: []
       }
+      banco_horas: {
+        Row: {
+          id_registro: number
+          id_motorista: string
+          tipo: "credito" | "debito"
+          quantidade_horas: number
+          descricao: string
+          data_registro: string
+          created_at: string
+        }
+        Insert: {
+          id_registro?: number         
+          id_motorista: string         
+          tipo: "credito" | "debito"   
+          quantidade_horas: number     
+          descricao: string            
+          data_registro: string         
+          created_at?: string          
+        }
+        Update: {
+          id_registro?: number
+          id_motorista?: string
+          tipo?: "credito" | "debito"
+          quantidade_horas?: number
+          descricao?: string
+          data_registro?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banco_horas_id_motorista_fkey"
+            columns: ["id_motorista"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          }
+        ]
+}
     }
     Views: {
       [_ in never]: never
@@ -361,7 +399,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "gestor" | "visualizador" | "motorista"
       maintenance_type: "preventiva" | "corretiva" | "emergencial"
-      trip_status: "Confirmada" | "Cancelada" | "Concluída"
+      trip_status: "Confirmada" | "Cancelada" | "Concluída" | "Pendente"
       vehicle_status: "Ativo" | "Manutenção" | "Inativo"
       vehicle_type: "Carro" | "Van" | "Ônibus"
     }
@@ -493,7 +531,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "gestor", "visualizador", "motorista"],
       maintenance_type: ["preventiva", "corretiva", "emergencial"],
-      trip_status: ["Confirmada", "Cancelada", "Concluída"],
+      trip_status: ["Confirmada", "Cancelada", "Concluída", "Pendente"],
       vehicle_status: ["Ativo", "Manutenção", "Inativo"],
       vehicle_type: ["Carro", "Van", "Ônibus"],
     },

@@ -16,6 +16,7 @@ import Usuarios from "./pages/Usuarios";
 import MinhaAgenda from "./pages/MinhaAgenda";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import BancodeHoras from "./pages/BancodeHoras";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ function ProtectedRoutes() {
         <Route path="/manutencao" element={<Manutencao />} />
         <Route path="/relatorios" element={<Relatorios />} />
         <Route path="/usuarios" element={<Usuarios />} />
+        <Route path="/bancodehoras" element={<BancodeHoras/>}/>
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>

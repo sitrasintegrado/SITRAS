@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText,
-  ShieldCheck, LogOut, ChevronUp, Wrench,
+  ShieldCheck, LogOut, ChevronUp, Wrench, CalendarClock
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +67,10 @@ export function AppSidebar() {
 
   const otherItems = [
     { title: 'Relatórios', url: '/relatorios', icon: FileText },
-    ...(canManageUsers ? [{ title: 'Usuários', url: '/usuarios', icon: ShieldCheck }] : []),
+    ...(canManageUsers ? [
+      { title: 'Usuários', url: '/usuarios', icon: ShieldCheck}, 
+      {title: 'Banco de Horas', url: '/bancodehoras', icon: CalendarClock}
+    ] : []),
   ];
 
   const initials = user?.email

@@ -120,6 +120,10 @@ const Agendamentos = () => {
             })),
             notes: t.notes,
             status: t.status,
+            telefone: t.passengers
+              .map(tp => patients.find(x => x.id === tp.patientId)?.phone)
+              .filter(Boolean)
+              .join(', ')
           };
         }),
         userName: 'Administração',

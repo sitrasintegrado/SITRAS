@@ -528,6 +528,7 @@ interface DriverScheduleData {
     passengers: { name: string; hasCompanion: boolean }[];
     notes: string;
     status: string;
+    telefone: string
   }[];
   userName: string;
 }
@@ -552,14 +553,14 @@ export async function exportDriverSchedulePDF(data: DriverScheduleData) {
       paxNames,
       t.destination || '—',
       t.consultLocation || '—',
-      companions,
+      t.telefone,
       t.notes || '—',
     ];
   });
 
   autoTable(doc, {
     startY: 50,
-    head: [['#', 'Horário', 'Paciente(s)', 'Destino', 'Local de Saída', 'Acompanhante(s)', 'Observações']],
+    head: [['#', 'Horário', 'Paciente(s)', 'Destino', 'Local de Saída', 'Telefone', 'Observações']],
     body: rows,
     theme: 'striped',
     headStyles: { fillColor: [30, 64, 120], fontSize: 8, fontStyle: 'bold' },
