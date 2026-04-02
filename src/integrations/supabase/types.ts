@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      banco_horas: {
+        Row: {
+          created_at: string | null
+          data_registro: string
+          descricao: string
+          id_motorista: string | null
+          id_registro: number
+          quantidade_horas: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_registro: string
+          descricao: string
+          id_motorista?: string | null
+          id_registro?: number
+          quantidade_horas: number
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          data_registro?: string
+          descricao?: string
+          id_motorista?: string | null
+          id_registro?: number
+          quantidade_horas?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banco_horas_id_motorista_fkey"
+            columns: ["id_motorista"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drivers: {
         Row: {
           cnh: string
@@ -22,6 +60,7 @@ export type Database = {
           cpf: string
           created_at: string
           id: string
+          id_empresa: number | null
           name: string
           phone: string
           user_id: string | null
@@ -33,6 +72,7 @@ export type Database = {
           cpf?: string
           created_at?: string
           id?: string
+          id_empresa?: number | null
           name: string
           phone?: string
           user_id?: string | null
@@ -44,11 +84,20 @@ export type Database = {
           cpf?: string
           created_at?: string
           id?: string
+          id_empresa?: number | null
           name?: string
           phone?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "drivers_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
+          },
+        ]
       }
       empresas: {
         Row: {
@@ -75,6 +124,7 @@ export type Database = {
           date: string
           description: string
           id: string
+          id_empresa: number | null
           next_review_date: string | null
           next_review_km: number | null
           part_replaced: string
@@ -89,6 +139,7 @@ export type Database = {
           date: string
           description?: string
           id?: string
+          id_empresa?: number | null
           next_review_date?: string | null
           next_review_km?: number | null
           part_replaced?: string
@@ -103,6 +154,7 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          id_empresa?: number | null
           next_review_date?: string | null
           next_review_km?: number | null
           part_replaced?: string
@@ -112,6 +164,13 @@ export type Database = {
           workshop?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "maintenances_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
+          },
           {
             foreignKeyName: "maintenances_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -127,6 +186,7 @@ export type Database = {
           cpf: string
           created_at: string
           id: string
+          id_empresa: number | null
           name: string
           notes: string
           phone: string
@@ -136,6 +196,7 @@ export type Database = {
           cpf?: string
           created_at?: string
           id?: string
+          id_empresa?: number | null
           name: string
           notes?: string
           phone?: string
@@ -145,11 +206,20 @@ export type Database = {
           cpf?: string
           created_at?: string
           id?: string
+          id_empresa?: number | null
           name?: string
           notes?: string
           phone?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patients_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -231,6 +301,7 @@ export type Database = {
           destination: string
           driver_id: string | null
           id: string
+          id_empresa: number | null
           notes: string
           status: Database["public"]["Enums"]["trip_status"]
           vehicle_id: string | null
@@ -243,6 +314,7 @@ export type Database = {
           destination?: string
           driver_id?: string | null
           id?: string
+          id_empresa?: number | null
           notes?: string
           status?: Database["public"]["Enums"]["trip_status"]
           vehicle_id?: string | null
@@ -255,6 +327,7 @@ export type Database = {
           destination?: string
           driver_id?: string | null
           id?: string
+          id_empresa?: number | null
           notes?: string
           status?: Database["public"]["Enums"]["trip_status"]
           vehicle_id?: string | null
@@ -266,6 +339,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "drivers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
           },
           {
             foreignKeyName: "trips_vehicle_id_fkey"
@@ -301,6 +381,7 @@ export type Database = {
           chassi: string
           created_at: string
           id: string
+          id_empresa: number | null
           modelo: string
           plate: string
           renavam: string
@@ -313,6 +394,7 @@ export type Database = {
           chassi?: string
           created_at?: string
           id?: string
+          id_empresa?: number | null
           modelo?: string
           plate?: string
           renavam?: string
@@ -325,52 +407,23 @@ export type Database = {
           chassi?: string
           created_at?: string
           id?: string
+          id_empresa?: number | null
           modelo?: string
           plate?: string
           renavam?: string
           status?: Database["public"]["Enums"]["vehicle_status"]
           type?: Database["public"]["Enums"]["vehicle_type"]
         }
-        Relationships: []
-      }
-      banco_horas: {
-        Row: {
-          id_registro: number
-          id_motorista: string
-          tipo: "credito" | "debito"
-          quantidade_horas: number
-          descricao: string
-          data_registro: string
-          created_at: string
-        }
-        Insert: {
-          id_registro?: number         
-          id_motorista: string         
-          tipo: "credito" | "debito"   
-          quantidade_horas: number     
-          descricao: string            
-          data_registro: string         
-          created_at?: string          
-        }
-        Update: {
-          id_registro?: number
-          id_motorista?: string
-          tipo?: "credito" | "debito"
-          quantidade_horas?: number
-          descricao?: string
-          data_registro?: string
-          created_at?: string
-        }
         Relationships: [
           {
-            foreignKeyName: "banco_horas_id_motorista_fkey"
-            columns: ["id_motorista"]
+            foreignKeyName: "vehicles_id_empresa_fkey"
+            columns: ["id_empresa"]
             isOneToOne: false
-            referencedRelation: "drivers"
-            referencedColumns: ["id"]
-          }
+            referencedRelation: "empresas"
+            referencedColumns: ["id_empresa"]
+          },
         ]
-}
+      }
     }
     Views: {
       [_ in never]: never
