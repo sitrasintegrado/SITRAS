@@ -528,7 +528,7 @@ interface DriverScheduleData {
     passengers: { name: string; hasCompanion: boolean }[];
     notes: string;
     status: string;
-    telefone: string
+    telefone?: string
   }[];
   userName: string;
 }
