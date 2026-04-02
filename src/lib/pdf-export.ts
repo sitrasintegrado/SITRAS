@@ -553,7 +553,7 @@ export async function exportDriverSchedulePDF(data: DriverScheduleData) {
       paxNames,
       t.destination || '—',
       t.consultLocation || '—',
-      t.telefone,
+      t.telefone || '—',
       t.notes || '—',
     ];
   });
