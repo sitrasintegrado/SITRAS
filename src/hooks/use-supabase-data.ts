@@ -280,7 +280,7 @@ export function useBancoHoras(driverId?: string) {
       setRegistros(data.map(r => ({
         idRegistro: r.id_registro,
         idMotorista: r.id_motorista,
-        tipo: r.tipo,
+        tipo: r.tipo as 'credito' | 'debito',
         quantidadeHoras: Number(r.quantidade_horas), // Garante que volta como número
         descricao: r.descricao,
         dataRegistro: r.data_registro,

@@ -528,7 +528,7 @@ interface DriverScheduleData {
     passengers: { name: string; hasCompanion: boolean }[];
     notes: string;
     status: string;
-    telefone: string
+    telefone?: string
   }[];
   userName: string;
 }
@@ -553,7 +553,7 @@ export async function exportDriverSchedulePDF(data: DriverScheduleData) {
       paxNames,
       t.destination || '—',
       t.consultLocation || '—',
-      t.telefone,
+      t.telefone || '—',
       t.notes || '—',
     ];
   });
