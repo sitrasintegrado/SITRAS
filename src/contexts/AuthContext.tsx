@@ -19,6 +19,8 @@ interface AuthContextType {
   canManageSettings: boolean;
   canSetMotorista: boolean;
   isDriver: boolean;
+  isMarcador: boolean;
+  canViewPendingRequests: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
