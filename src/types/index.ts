@@ -58,7 +58,7 @@ export interface Trip {
   driverId: string;
   passengers: TripPassenger[];
   notes: string;
-  status: 'Confirmada' | 'Cancelada' | 'Concluída' | 'Pendente';
+  status: 'Confirmada' | 'Cancelada' | 'Concluída' | 'Pendente' | 'Pendente de Frota' | 'Aguardando Motorista' | 'Em andamento' | 'Finalizada';
 }
 
 const emptyTrip: Omit<Trip, 'id'> = {

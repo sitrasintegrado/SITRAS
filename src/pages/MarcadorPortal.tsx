@@ -3,25 +3,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrips, useVehicles, usePatients } from '@/hooks/use-supabase-data';
 import { useTransportRequests } from '@/hooks/use-transport-requests';
 import { useNotifications } from '@/hooks/use-notifications';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { BuscaPaciente } from '@/components/BuscaPaciente';
-import { LogOut, Bus, Send, Bell, CalendarDays, Clock, MapPin, Plus, CheckCircle } from 'lucide-react';
+import { LogOut, Bus, Send, Bell, CalendarDays, Clock, MapPin, Plus, CheckCircle, UserPlus, Trash2, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
 
 const MarcadorPortal = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const { trips } = useTrips();
+  const { trips, refetch: refetchTrips } = useTrips();
   const { vehicles } = useVehicles();
   const { patients } = usePatients();
   const { requests, create: createRequest } = useTransportRequests();
@@ -29,6 +29,10 @@ const MarcadorPortal = () => {
 
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [solicitarOpen, setSolicitarOpen] = useState(false);
+  const [addPassengerOpen, setAddPassengerOpen] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState('');
+  const [newPassenger, setNewPassenger] = useState({ patientId: '', hasCompanion: false, isPcd: false });
+  const [savingPassenger, setSavingPassenger] = useState(false);
   const [solicitarForm, setSolicitarForm] = useState({
     patientId: '', date: new Date().toISOString().split('T')[0],
     consultTime: '', destination: '', consultLocation: '',
@@ -36,10 +40,47 @@ const MarcadorPortal = () => {
   });
 
   // Filter only bus-type vehicles the marcador can see
-  const busTrips = useMemo(() => {
-    const busVehicleIds = new Set(vehicles.filter(v => v.type === 'Ônibus').map(v => v.id));
-    return trips.filter(t => busVehicleIds.has(t.vehicleId));
-  }, [trips, vehicles]);
+  const busVehicleIds = useMemo(() => new Set(vehicles.filter(v => v.type === 'Ônibus').map(v => v.id)), [vehicles]);
+  const busTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
+
+  const openAddPassenger = (tripId: string) => {
+    setSelectedTripId(tripId);
+    setNewPassenger({ patientId: '', hasCompanion: false, isPcd: false });
+    setAddPassengerOpen(true);
+  };
+
+  const handleAddPassenger = async () => {
+    if (!newPassenger.patientId) {
+      toast({ title: 'Selecione um paciente', variant: 'destructive' });
+      return;
+    }
+    setSavingPassenger(true);
+    const { error } = await supabase.from('trip_passengers').insert({
+      trip_id: selectedTripId,
+      patient_id: newPassenger.patientId,
+      has_companion: newPassenger.hasCompanion,
+      is_pcd: newPassenger.isPcd,
+    });
+    setSavingPassenger(false);
+    if (error) {
+      toast({ title: 'Erro ao adicionar passageiro', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Passageiro adicionado!' });
+      setAddPassengerOpen(false);
+      await refetchTrips();
+    }
+  };
+
+  const handleRemovePassenger = async (tripId: string, patientId: string) => {
+    const { error } = await supabase.from('trip_passengers').delete()
+      .eq('trip_id', tripId).eq('patient_id', patientId);
+    if (error) {
+      toast({ title: 'Erro ao remover passageiro', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Passageiro removido' });
+      await refetchTrips();
+    }
+  };
 
   const handleSolicitar = async () => {
     if (!solicitarForm.patientId || !solicitarForm.date) {
@@ -91,8 +132,7 @@ const MarcadorPortal = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
-              size="icon"
+              variant="ghost" size="icon"
               className="text-primary-foreground hover:bg-white/20 relative"
               onClick={() => setActiveTab('notificacoes')}
             >
@@ -139,8 +179,8 @@ const MarcadorPortal = () => {
             ) : (
               busTrips.map(trip => {
                 const vehicle = vehicles.find(v => v.id === trip.vehicleId);
-                const paxNames = trip.passengers.map(p => patients.find(pt => pt.id === p.patientId)?.name || 'Paciente');
                 const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
+                const canAddPassenger = trip.status === 'Aguardando Motorista';
                 return (
                   <Card key={trip.id}>
                     <CardHeader className="pb-2">
@@ -154,18 +194,41 @@ const MarcadorPortal = () => {
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="text-xs text-muted-foreground">
+                    <CardContent className="space-y-3">
+                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
                         <span>Veículo: {vehicle?.type} {vehicle?.plate}</span>
-                        <span className="ml-4">Data: {trip.date.split('-').reverse().join('/')}</span>
-                        <span className="ml-4">Ocupação: {seats}/{vehicle?.capacity || '?'}</span>
+                        <span>Data: {trip.date.split('-').reverse().join('/')}</span>
+                        <span>Ocupação: {seats}/{vehicle?.capacity || '?'}</span>
                       </div>
-                      {paxNames.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {paxNames.map((n, i) => (
-                            <Badge key={i} variant="outline" className="text-[10px]">{n}</Badge>
-                          ))}
+
+                      {/* Passenger list */}
+                      {trip.passengers.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium flex items-center gap-1"><Users className="h-3 w-3" /> Passageiros:</p>
+                          {trip.passengers.map((p, i) => {
+                            const pat = patients.find(pt => pt.id === p.patientId);
+                            return (
+                              <div key={i} className="flex items-center justify-between bg-muted/50 rounded px-2 py-1">
+                                <span className="text-xs">
+                                  {pat?.name || 'Paciente'}
+                                  {p.hasCompanion && <Badge variant="outline" className="ml-1 text-[9px]">+Acomp.</Badge>}
+                                </span>
+                                {canAddPassenger && (
+                                  <Button size="icon" variant="ghost" className="h-6 w-6"
+                                    onClick={() => handleRemovePassenger(trip.id, p.patientId)}>
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
+                      )}
+
+                      {canAddPassenger && (
+                        <Button size="sm" variant="outline" className="w-full" onClick={() => openAddPassenger(trip.id)}>
+                          <UserPlus className="h-4 w-4 mr-1" /> Adicionar Paciente
+                        </Button>
                       )}
                     </CardContent>
                   </Card>
@@ -237,6 +300,39 @@ const MarcadorPortal = () => {
         </Tabs>
       </div>
 
+      {/* Dialog Adicionar Passageiro */}
+      <Dialog open={addPassengerOpen} onOpenChange={setAddPassengerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar Paciente ao Ônibus</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Paciente</Label>
+              <BuscaPaciente onSelectPaciente={(id) => setNewPassenger({ ...newPassenger, patientId: id })} />
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Checkbox checked={newPassenger.hasCompanion}
+                  onCheckedChange={(c) => setNewPassenger({ ...newPassenger, hasCompanion: !!c })} />
+                <Label className="text-sm">Acompanhante</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox checked={newPassenger.isPcd}
+                  onCheckedChange={(c) => setNewPassenger({ ...newPassenger, isPcd: !!c })} />
+                <Label className="text-sm">PCD</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddPassengerOpen(false)}>Cancelar</Button>
+            <Button onClick={handleAddPassenger} disabled={savingPassenger}>
+              {savingPassenger ? 'Salvando...' : 'Adicionar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog Solicitar Veículo */}
       <Dialog open={solicitarOpen} onOpenChange={setSolicitarOpen}>
         <DialogContent className="max-w-md">
@@ -246,9 +342,7 @@ const MarcadorPortal = () => {
           <div className="space-y-4">
             <div>
               <Label>Paciente</Label>
-              <BuscaPaciente
-                onSelectPaciente={(id) => setSolicitarForm({ ...solicitarForm, patientId: id })}
-              />
+              <BuscaPaciente onSelectPaciente={(id) => setSolicitarForm({ ...solicitarForm, patientId: id })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -273,10 +367,8 @@ const MarcadorPortal = () => {
                 onChange={e => setSolicitarForm({ ...solicitarForm, consultLocation: e.target.value })} />
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox
-                checked={solicitarForm.hasCompanion}
-                onCheckedChange={(c) => setSolicitarForm({ ...solicitarForm, hasCompanion: !!c })}
-              />
+              <Checkbox checked={solicitarForm.hasCompanion}
+                onCheckedChange={(c) => setSolicitarForm({ ...solicitarForm, hasCompanion: !!c })} />
               <Label>Possui acompanhante</Label>
             </div>
             <div>
