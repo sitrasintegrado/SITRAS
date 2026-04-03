@@ -13,6 +13,7 @@ import { differenceInDays, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { trips } = useTrips();
   const { vehicles } = useVehicles();
   const { drivers } = useDrivers();
