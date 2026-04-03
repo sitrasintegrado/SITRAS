@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = role === 'admin';
   const isGestor = role === 'gestor';
   const isDriver = role === 'motorista';
+  const isMarcador = role === 'marcador';
 
   const value: AuthContextType = {
     user,
@@ -93,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     canManageSettings: isAdmin,
     canSetMotorista: isAdmin,
     isDriver,
+    isMarcador,
+    canViewPendingRequests: isAdmin || isGestor,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
