@@ -14,6 +14,8 @@ import Manutencao from "./pages/Manutencao";
 import Relatorios from "./pages/Relatorios";
 import Usuarios from "./pages/Usuarios";
 import MinhaAgenda from "./pages/MinhaAgenda";
+import MarcadorPortal from "./pages/MarcadorPortal";
+import AgendamentosPendentes from "./pages/AgendamentosPendentes";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import BancodeHoras from "./pages/BancodeHoras";
