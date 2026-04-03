@@ -272,6 +272,7 @@ const Usuarios = () => {
                     <SelectItem value="gestor">Gestor de Frota</SelectItem>
                     <SelectItem value="visualizador">Visualizador</SelectItem>
                     <SelectItem value="motorista">Motorista</SelectItem>
+                    <SelectItem value="marcador">Marcador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
