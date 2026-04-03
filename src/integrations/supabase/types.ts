@@ -180,6 +180,81 @@ export type Database = {
           },
         ]
       }
+      marcador_vehicle_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read_at: string | null
+          recipient_user_id: string
+          related_request_id: string | null
+          related_trip_id: string | null
+          sender_user_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          recipient_user_id: string
+          related_request_id?: string | null
+          related_trip_id?: string | null
+          sender_user_id?: string | null
+          title?: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          recipient_user_id?: string
+          related_request_id?: string | null
+          related_trip_id?: string | null
+          sender_user_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_request_id_fkey"
+            columns: ["related_request_id"]
+            isOneToOne: false
+            referencedRelation: "transport_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_trip_id_fkey"
+            columns: ["related_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string
@@ -256,22 +331,78 @@ export type Database = {
           },
         ]
       }
+      transport_requests: {
+        Row: {
+          consult_location: string
+          consult_time: string
+          created_at: string
+          created_by: string
+          date: string
+          destination: string
+          has_companion: boolean
+          id: string
+          notes: string
+          patient_id: string
+          status: Database["public"]["Enums"]["transport_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          consult_location?: string
+          consult_time?: string
+          created_at?: string
+          created_by?: string
+          date: string
+          destination?: string
+          has_companion?: boolean
+          id?: string
+          notes?: string
+          patient_id: string
+          status?: Database["public"]["Enums"]["transport_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          consult_location?: string
+          consult_time?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          destination?: string
+          has_companion?: boolean
+          id?: string
+          notes?: string
+          patient_id?: string
+          status?: Database["public"]["Enums"]["transport_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_passengers: {
         Row: {
           has_companion: boolean
           id: string
+          is_pcd: boolean
           patient_id: string
           trip_id: string
         }
         Insert: {
           has_companion?: boolean
           id?: string
+          is_pcd?: boolean
           patient_id: string
           trip_id: string
         }
         Update: {
           has_companion?: boolean
           id?: string
+          is_pcd?: boolean
           patient_id?: string
           trip_id?: string
         }
@@ -304,6 +435,7 @@ export type Database = {
           id_empresa: number | null
           notes: string
           status: Database["public"]["Enums"]["trip_status"]
+          transport_request_id: string | null
           vehicle_id: string | null
         }
         Insert: {
@@ -317,6 +449,7 @@ export type Database = {
           id_empresa?: number | null
           notes?: string
           status?: Database["public"]["Enums"]["trip_status"]
+          transport_request_id?: string | null
           vehicle_id?: string | null
         }
         Update: {
@@ -330,6 +463,7 @@ export type Database = {
           id_empresa?: number | null
           notes?: string
           status?: Database["public"]["Enums"]["trip_status"]
+          transport_request_id?: string | null
           vehicle_id?: string | null
         }
         Relationships: [
@@ -346,6 +480,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id_empresa"]
+          },
+          {
+            foreignKeyName: "trips_transport_request_id_fkey"
+            columns: ["transport_request_id"]
+            isOneToOne: false
+            referencedRelation: "transport_requests"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "trips_vehicle_id_fkey"
@@ -429,6 +570,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_marcador_create_trip: {
+        Args: {
+          _driver_id: string
+          _status: Database["public"]["Enums"]["trip_status"]
+          _transport_request_id: string
+          _user_id: string
+          _vehicle_id: string
+        }
+        Returns: boolean
+      }
+      can_marcador_modify_trip: {
+        Args: { _trip_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_marcador_read_trip: {
+        Args: { _trip_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_marcador_read_vehicle: {
+        Args: { _user_id: string; _vehicle_id: string }
+        Returns: boolean
+      }
       get_drivers_summary: {
         Args: never
         Returns: {
@@ -441,6 +604,13 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      has_marcador_vehicle_access: {
+        Args: {
+          _user_id: string
+          _vehicle_type: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -448,13 +618,29 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_role_name: {
+        Args: { _role: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "admin" | "gestor" | "visualizador" | "motorista"
+      app_role: "admin" | "gestor" | "visualizador" | "motorista" | "marcador"
       maintenance_type: "preventiva" | "corretiva" | "emergencial"
-      trip_status: "Confirmada" | "Cancelada" | "Concluída" | "Pendente"
+      transport_request_status:
+        | "Pendente de Aprovação da Frota"
+        | "Aprovada"
+        | "Cancelada"
+      trip_status:
+        | "Confirmada"
+        | "Cancelada"
+        | "Concluída"
+        | "Pendente"
+        | "Pendente de Frota"
+        | "Aguardando Motorista"
+        | "Em andamento"
+        | "Finalizada"
       vehicle_status: "Ativo" | "Manutenção" | "Inativo"
-      vehicle_type: "Carro" | "Van" | "Ônibus"
+      vehicle_type: "Carro" | "Van" | "Ônibus" | "Ambulância"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -582,11 +768,25 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gestor", "visualizador", "motorista"],
+      app_role: ["admin", "gestor", "visualizador", "motorista", "marcador"],
       maintenance_type: ["preventiva", "corretiva", "emergencial"],
-      trip_status: ["Confirmada", "Cancelada", "Concluída", "Pendente"],
+      transport_request_status: [
+        "Pendente de Aprovação da Frota",
+        "Aprovada",
+        "Cancelada",
+      ],
+      trip_status: [
+        "Confirmada",
+        "Cancelada",
+        "Concluída",
+        "Pendente",
+        "Pendente de Frota",
+        "Aguardando Motorista",
+        "Em andamento",
+        "Finalizada",
+      ],
       vehicle_status: ["Ativo", "Manutenção", "Inativo"],
-      vehicle_type: ["Carro", "Van", "Ônibus"],
+      vehicle_type: ["Carro", "Van", "Ônibus", "Ambulância"],
     },
   },
 } as const
