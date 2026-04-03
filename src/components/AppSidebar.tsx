@@ -56,6 +56,7 @@ export function AppSidebar() {
   const mainItems = [
     { title: 'Painel', url: '/', icon: LayoutDashboard },
     { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
+    ...(canViewPendingRequests ? [{ title: 'Pendentes', url: '/agendamentos-pendentes', icon: ClipboardList }] : []),
   ];
 
   const cadastroItems = [
