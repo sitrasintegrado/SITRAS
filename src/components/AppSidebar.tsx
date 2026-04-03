@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText,
-  ShieldCheck, LogOut, ChevronUp, Wrench, CalendarClock
+  ShieldCheck, LogOut, ChevronUp, Wrench, CalendarClock, ClipboardList
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -51,11 +51,12 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const { user, role, canManageUsers, signOut } = useAuth();
+  const { user, role, canManageUsers, canViewPendingRequests, signOut } = useAuth();
 
   const mainItems = [
     { title: 'Painel', url: '/', icon: LayoutDashboard },
     { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
+    ...(canViewPendingRequests ? [{ title: 'Pendentes', url: '/agendamentos-pendentes', icon: ClipboardList }] : []),
   ];
 
   const cadastroItems = [

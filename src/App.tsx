@@ -14,6 +14,8 @@ import Manutencao from "./pages/Manutencao";
 import Relatorios from "./pages/Relatorios";
 import Usuarios from "./pages/Usuarios";
 import MinhaAgenda from "./pages/MinhaAgenda";
+import MarcadorPortal from "./pages/MarcadorPortal";
+import AgendamentosPendentes from "./pages/AgendamentosPendentes";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import BancodeHoras from "./pages/BancodeHoras";
@@ -21,7 +23,7 @@ import BancodeHoras from "./pages/BancodeHoras";
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { user, loading, isDriver } = useAuth();
+  const { user, loading, isDriver, isMarcador } = useAuth();
 
   if (loading) {
     return (
@@ -38,11 +40,17 @@ function ProtectedRoutes() {
     return <MinhaAgenda />;
   }
 
+  // Marcador portal - standalone simplified interface
+  if (isMarcador) {
+    return <MarcadorPortal />;
+  }
+
   return (
     <AppLayout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/agendamentos" element={<Agendamentos />} />
+        <Route path="/agendamentos-pendentes" element={<AgendamentosPendentes />} />
         <Route path="/pacientes" element={<Pacientes />} />
         <Route path="/veiculos" element={<Veiculos />} />
         <Route path="/motoristas" element={<Motoristas />} />
