@@ -251,7 +251,10 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className={`border-0 shadow-md bg-gradient-to-br ${managerial.awaitingDriver > 0 ? 'from-card to-destructive/10 border border-warning/30' : 'from-card to-muted/5'}`}>
+        <Card
+          className={`border-0 shadow-md bg-gradient-to-br cursor-pointer hover:shadow-lg transition-shadow ${managerial.awaitingDriver > 0 ? 'from-card to-destructive/10 border border-warning/30' : 'from-card to-muted/5'}`}
+          onClick={() => navigate('/agendamentos-pendentes')}
+        >
           <CardContent className="p-5 flex items-center gap-4">
             <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${managerial.awaitingDriver > 0 ? 'bg-warning/15' : 'bg-muted/10'}`}>
               <Clock className={`h-6 w-6 ${managerial.awaitingDriver > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
@@ -260,7 +263,7 @@ const Dashboard = () => {
               <p className="text-3xl font-bold tracking-tight">{managerial.awaitingDriver}</p>
               <p className="text-xs text-muted-foreground font-medium">Aguardando motorista</p>
               {managerial.awaitingDriver > 0 && (
-                <p className="text-[10px] text-warning mt-0.5">Ação necessária</p>
+                <p className="text-[10px] text-warning mt-0.5">Clique para gerenciar →</p>
               )}
             </div>
           </CardContent>
