@@ -95,8 +95,13 @@ const MarcadorPortal = () => {
       toast({ title: 'Selecione veículo e data', variant: 'destructive' });
       return;
     }
+    const validPassengers = newTripForm.passengers.filter(p => p.patientId);
+    if (validPassengers.length === 0) {
+      toast({ title: 'Adicione pelo menos um paciente', variant: 'destructive' });
+      return;
+    }
     setSavingTrip(true);
-    const { error } = await supabase.from('trips').insert({
+    const { data: tripData, error } = await supabase.from('trips').insert({
       vehicle_id: newTripForm.vehicleId,
       date: newTripForm.date,
       departure_time: newTripForm.departureTime,
@@ -105,15 +110,32 @@ const MarcadorPortal = () => {
       notes: newTripForm.notes,
       status: 'Aguardando Motorista' as any,
       driver_id: null,
-    });
+    }).select().single();
+
+    if (error || !tripData) {
+      setSavingTrip(false);
+      toast({ title: 'Erro ao criar viagem', description: error?.message, variant: 'destructive' });
+      return;
+    }
+
+    // Insert passengers
+    if (validPassengers.length > 0) {
+      await supabase.from('trip_passengers').insert(
+        validPassengers.map(p => ({
+          trip_id: tripData.id,
+          patient_id: p.patientId,
+          has_companion: p.hasCompanion,
+          is_pcd: p.isPcd,
+        }))
+      );
+    }
+
     setSavingTrip(false);
-    if (error) {
-      toast({ title: 'Erro ao criar viagem', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Viagem de ônibus criada!' });
-      setCreateTripOpen(false);
-      setNewTripForm({ vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '' });
-      await refetchTrips();
+    toast({ title: 'Viagem de ônibus criada!' });
+    setCreateTripOpen(false);
+    const emptyForm = { vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '', passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] };
+    setNewTripForm(emptyForm);
+    await refetchTrips();
     }
   };
 
