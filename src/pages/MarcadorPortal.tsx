@@ -31,17 +31,24 @@ const MarcadorPortal = () => {
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [solicitarOpen, setSolicitarOpen] = useState(false);
   const [addPassengerOpen, setAddPassengerOpen] = useState(false);
+  const [createTripOpen, setCreateTripOpen] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState('');
   const [newPassenger, setNewPassenger] = useState({ patientId: '', hasCompanion: false, isPcd: false });
   const [savingPassenger, setSavingPassenger] = useState(false);
+  const [savingTrip, setSavingTrip] = useState(false);
+  const [newTripForm, setNewTripForm] = useState({
+    vehicleId: '', date: new Date().toISOString().split('T')[0],
+    departureTime: '06:00', destination: '', consultLocation: '', notes: '',
+  });
   const [solicitarForm, setSolicitarForm] = useState({
     patientId: '', date: new Date().toISOString().split('T')[0],
     consultTime: '', destination: '', consultLocation: '',
     hasCompanion: false, notes: '',
   });
 
-  // Filter only bus-type vehicles the marcador can see
-  const busVehicleIds = useMemo(() => new Set(vehicles.filter(v => v.type === 'Ônibus').map(v => v.id)), [vehicles]);
+  // Bus vehicles available
+  const busVehicles = useMemo(() => vehicles.filter(v => v.type === 'Ônibus' && v.status === 'Ativo'), [vehicles]);
+  const busVehicleIds = useMemo(() => new Set(busVehicles.map(v => v.id)), [busVehicles]);
   const busTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
 
   const openAddPassenger = (tripId: string) => {
