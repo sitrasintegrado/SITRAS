@@ -207,6 +207,9 @@ const MarcadorPortal = () => {
           <TabsContent value="agendamentos" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">Viagens de Ônibus</h2>
+              <Button size="sm" onClick={() => setCreateTripOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Viagem
+              </Button>
             </div>
             {busTrips.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem de ônibus disponível.</CardContent></Card>
