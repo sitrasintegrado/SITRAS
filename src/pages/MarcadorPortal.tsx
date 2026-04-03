@@ -422,6 +422,61 @@ const MarcadorPortal = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Criar Viagem de Ônibus */}
+      <Dialog open={createTripOpen} onOpenChange={setCreateTripOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Viagem de Ônibus</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Ônibus</Label>
+              <Select value={newTripForm.vehicleId} onValueChange={v => setNewTripForm({ ...newTripForm, vehicleId: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione o ônibus" /></SelectTrigger>
+                <SelectContent>
+                  {busVehicles.map(v => (
+                    <SelectItem key={v.id} value={v.id}>{v.plate} — {v.modelo || v.type} ({v.capacity} lugares)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Data</Label>
+                <Input type="date" value={newTripForm.date}
+                  onChange={e => setNewTripForm({ ...newTripForm, date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Horário de Saída</Label>
+                <Input type="time" value={newTripForm.departureTime}
+                  onChange={e => setNewTripForm({ ...newTripForm, departureTime: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label>Destino</Label>
+              <Input value={newTripForm.destination}
+                onChange={e => setNewTripForm({ ...newTripForm, destination: e.target.value })} />
+            </div>
+            <div>
+              <Label>Local da Consulta</Label>
+              <Input value={newTripForm.consultLocation}
+                onChange={e => setNewTripForm({ ...newTripForm, consultLocation: e.target.value })} />
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Textarea value={newTripForm.notes}
+                onChange={e => setNewTripForm({ ...newTripForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateTripOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateTrip} disabled={savingTrip}>
+              {savingTrip ? 'Criando...' : 'Criar Viagem'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
