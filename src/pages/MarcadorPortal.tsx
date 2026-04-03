@@ -39,6 +39,7 @@ const MarcadorPortal = () => {
   const [newTripForm, setNewTripForm] = useState({
     vehicleId: '', date: new Date().toISOString().split('T')[0],
     departureTime: '06:00', destination: '', consultLocation: '', notes: '',
+    passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] as { patientId: string; hasCompanion: boolean; isPcd: boolean }[],
   });
   const [solicitarForm, setSolicitarForm] = useState({
     patientId: '', date: new Date().toISOString().split('T')[0],
