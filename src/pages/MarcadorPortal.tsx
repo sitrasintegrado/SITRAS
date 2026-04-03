@@ -50,7 +50,19 @@ const MarcadorPortal = () => {
   // Bus vehicles available
   const busVehicles = useMemo(() => vehicles.filter(v => v.type === 'Ônibus' && v.status === 'Ativo'), [vehicles]);
   const busVehicleIds = useMemo(() => new Set(busVehicles.map(v => v.id)), [busVehicles]);
-  const busTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
+  const allBusTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
+  const busTrips = useMemo(() => allBusTrips.filter(t => t.status !== 'Concluída' && t.status !== 'Finalizada'), [allBusTrips]);
+  const concludedTrips = useMemo(() => allBusTrips.filter(t => t.status === 'Concluída' || t.status === 'Finalizada'), [allBusTrips]);
+
+  const handleMarkConcluded = async (tripId: string) => {
+    const { error } = await supabase.from('trips').update({ status: 'Concluída' as any }).eq('id', tripId);
+    if (error) {
+      toast({ title: 'Erro ao concluir viagem', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Viagem marcada como concluída!' });
+      await refetchTrips();
+    }
+  };
 
   const openAddPassenger = (tripId: string) => {
     setSelectedTripId(tripId);
