@@ -39,6 +39,7 @@ const MarcadorPortal = () => {
   const [newTripForm, setNewTripForm] = useState({
     vehicleId: '', date: new Date().toISOString().split('T')[0],
     departureTime: '06:00', destination: '', consultLocation: '', notes: '',
+    passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] as { patientId: string; hasCompanion: boolean; isPcd: boolean }[],
   });
   const [solicitarForm, setSolicitarForm] = useState({
     patientId: '', date: new Date().toISOString().split('T')[0],
@@ -94,8 +95,13 @@ const MarcadorPortal = () => {
       toast({ title: 'Selecione veículo e data', variant: 'destructive' });
       return;
     }
+    const validPassengers = newTripForm.passengers.filter(p => p.patientId);
+    if (validPassengers.length === 0) {
+      toast({ title: 'Adicione pelo menos um paciente', variant: 'destructive' });
+      return;
+    }
     setSavingTrip(true);
-    const { error } = await supabase.from('trips').insert({
+    const { data: tripData, error } = await supabase.from('trips').insert({
       vehicle_id: newTripForm.vehicleId,
       date: newTripForm.date,
       departure_time: newTripForm.departureTime,
@@ -104,16 +110,32 @@ const MarcadorPortal = () => {
       notes: newTripForm.notes,
       status: 'Aguardando Motorista' as any,
       driver_id: null,
-    });
-    setSavingTrip(false);
-    if (error) {
-      toast({ title: 'Erro ao criar viagem', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Viagem de ônibus criada!' });
-      setCreateTripOpen(false);
-      setNewTripForm({ vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '' });
-      await refetchTrips();
+    }).select().single();
+
+    if (error || !tripData) {
+      setSavingTrip(false);
+      toast({ title: 'Erro ao criar viagem', description: error?.message, variant: 'destructive' });
+      return;
     }
+
+    // Insert passengers
+    if (validPassengers.length > 0) {
+      await supabase.from('trip_passengers').insert(
+        validPassengers.map(p => ({
+          trip_id: tripData.id,
+          patient_id: p.patientId,
+          has_companion: p.hasCompanion,
+          is_pcd: p.isPcd,
+        }))
+      );
+    }
+
+    setSavingTrip(false);
+    toast({ title: 'Viagem de ônibus criada!' });
+    setCreateTripOpen(false);
+    const emptyForm = { vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '', passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] };
+    setNewTripForm(emptyForm);
+    await refetchTrips();
   };
 
   const handleSolicitar = async () => {
@@ -467,6 +489,56 @@ const MarcadorPortal = () => {
               <Label>Observações</Label>
               <Textarea value={newTripForm.notes}
                 onChange={e => setNewTripForm({ ...newTripForm, notes: e.target.value })} />
+            </div>
+
+            {/* Passageiros */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Passageiros</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() =>
+                  setNewTripForm({ ...newTripForm, passengers: [...newTripForm.passengers, { patientId: '', hasCompanion: false, isPcd: false }] })
+                }>
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar
+                </Button>
+              </div>
+              {newTripForm.passengers.map((pax, idx) => (
+                <div key={idx} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Paciente {idx + 1}</span>
+                    {newTripForm.passengers.length > 1 && (
+                      <Button type="button" size="icon" variant="ghost" className="h-6 w-6"
+                        onClick={() => setNewTripForm({ ...newTripForm, passengers: newTripForm.passengers.filter((_, i) => i !== idx) })}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                  <BuscaPaciente onSelectPaciente={(id) => {
+                    const updated = [...newTripForm.passengers];
+                    updated[idx] = { ...updated[idx], patientId: id };
+                    setNewTripForm({ ...newTripForm, passengers: updated });
+                  }} />
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={pax.hasCompanion}
+                        onCheckedChange={(c) => {
+                          const updated = [...newTripForm.passengers];
+                          updated[idx] = { ...updated[idx], hasCompanion: !!c };
+                          setNewTripForm({ ...newTripForm, passengers: updated });
+                        }} />
+                      <Label className="text-xs">Acompanhante</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={pax.isPcd}
+                        onCheckedChange={(c) => {
+                          const updated = [...newTripForm.passengers];
+                          updated[idx] = { ...updated[idx], isPcd: !!c };
+                          setNewTripForm({ ...newTripForm, passengers: updated });
+                        }} />
+                      <Label className="text-xs">PCD</Label>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <DialogFooter>
