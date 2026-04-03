@@ -490,6 +490,56 @@ const MarcadorPortal = () => {
               <Textarea value={newTripForm.notes}
                 onChange={e => setNewTripForm({ ...newTripForm, notes: e.target.value })} />
             </div>
+
+            {/* Passageiros */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Passageiros</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() =>
+                  setNewTripForm({ ...newTripForm, passengers: [...newTripForm.passengers, { patientId: '', hasCompanion: false, isPcd: false }] })
+                }>
+                  <Plus className="h-3 w-3 mr-1" /> Adicionar
+                </Button>
+              </div>
+              {newTripForm.passengers.map((pax, idx) => (
+                <div key={idx} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Paciente {idx + 1}</span>
+                    {newTripForm.passengers.length > 1 && (
+                      <Button type="button" size="icon" variant="ghost" className="h-6 w-6"
+                        onClick={() => setNewTripForm({ ...newTripForm, passengers: newTripForm.passengers.filter((_, i) => i !== idx) })}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                  <BuscaPaciente onSelectPaciente={(id) => {
+                    const updated = [...newTripForm.passengers];
+                    updated[idx] = { ...updated[idx], patientId: id };
+                    setNewTripForm({ ...newTripForm, passengers: updated });
+                  }} />
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={pax.hasCompanion}
+                        onCheckedChange={(c) => {
+                          const updated = [...newTripForm.passengers];
+                          updated[idx] = { ...updated[idx], hasCompanion: !!c };
+                          setNewTripForm({ ...newTripForm, passengers: updated });
+                        }} />
+                      <Label className="text-xs">Acompanhante</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={pax.isPcd}
+                        onCheckedChange={(c) => {
+                          const updated = [...newTripForm.passengers];
+                          updated[idx] = { ...updated[idx], isPcd: !!c };
+                          setNewTripForm({ ...newTripForm, passengers: updated });
+                        }} />
+                      <Label className="text-xs">PCD</Label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateTripOpen(false)}>Cancelar</Button>
