@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { BuscaPaciente } from '@/components/BuscaPaciente';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LogOut, Bus, Send, Bell, CalendarDays, Clock, MapPin, Plus, CheckCircle, UserPlus, Trash2, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
@@ -30,17 +31,24 @@ const MarcadorPortal = () => {
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [solicitarOpen, setSolicitarOpen] = useState(false);
   const [addPassengerOpen, setAddPassengerOpen] = useState(false);
+  const [createTripOpen, setCreateTripOpen] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState('');
   const [newPassenger, setNewPassenger] = useState({ patientId: '', hasCompanion: false, isPcd: false });
   const [savingPassenger, setSavingPassenger] = useState(false);
+  const [savingTrip, setSavingTrip] = useState(false);
+  const [newTripForm, setNewTripForm] = useState({
+    vehicleId: '', date: new Date().toISOString().split('T')[0],
+    departureTime: '06:00', destination: '', consultLocation: '', notes: '',
+  });
   const [solicitarForm, setSolicitarForm] = useState({
     patientId: '', date: new Date().toISOString().split('T')[0],
     consultTime: '', destination: '', consultLocation: '',
     hasCompanion: false, notes: '',
   });
 
-  // Filter only bus-type vehicles the marcador can see
-  const busVehicleIds = useMemo(() => new Set(vehicles.filter(v => v.type === 'Ônibus').map(v => v.id)), [vehicles]);
+  // Bus vehicles available
+  const busVehicles = useMemo(() => vehicles.filter(v => v.type === 'Ônibus' && v.status === 'Ativo'), [vehicles]);
+  const busVehicleIds = useMemo(() => new Set(busVehicles.map(v => v.id)), [busVehicles]);
   const busTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
 
   const openAddPassenger = (tripId: string) => {
@@ -78,6 +86,32 @@ const MarcadorPortal = () => {
       toast({ title: 'Erro ao remover passageiro', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Passageiro removido' });
+      await refetchTrips();
+    }
+  };
+  const handleCreateTrip = async () => {
+    if (!newTripForm.vehicleId || !newTripForm.date) {
+      toast({ title: 'Selecione veículo e data', variant: 'destructive' });
+      return;
+    }
+    setSavingTrip(true);
+    const { error } = await supabase.from('trips').insert({
+      vehicle_id: newTripForm.vehicleId,
+      date: newTripForm.date,
+      departure_time: newTripForm.departureTime,
+      destination: newTripForm.destination,
+      consult_location: newTripForm.consultLocation,
+      notes: newTripForm.notes,
+      status: 'Aguardando Motorista' as any,
+      driver_id: null,
+    });
+    setSavingTrip(false);
+    if (error) {
+      toast({ title: 'Erro ao criar viagem', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Viagem de ônibus criada!' });
+      setCreateTripOpen(false);
+      setNewTripForm({ vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '' });
       await refetchTrips();
     }
   };
@@ -173,6 +207,9 @@ const MarcadorPortal = () => {
           <TabsContent value="agendamentos" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">Viagens de Ônibus</h2>
+              <Button size="sm" onClick={() => setCreateTripOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Viagem
+              </Button>
             </div>
             {busTrips.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem de ônibus disponível.</CardContent></Card>
@@ -381,6 +418,61 @@ const MarcadorPortal = () => {
             <Button variant="outline" onClick={() => setSolicitarOpen(false)}>Cancelar</Button>
             <Button onClick={handleSolicitar}>
               <Send className="h-4 w-4 mr-1" /> Enviar Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Criar Viagem de Ônibus */}
+      <Dialog open={createTripOpen} onOpenChange={setCreateTripOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Viagem de Ônibus</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Ônibus</Label>
+              <Select value={newTripForm.vehicleId} onValueChange={v => setNewTripForm({ ...newTripForm, vehicleId: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione o ônibus" /></SelectTrigger>
+                <SelectContent>
+                  {busVehicles.map(v => (
+                    <SelectItem key={v.id} value={v.id}>{v.plate} — {v.modelo || v.type} ({v.capacity} lugares)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Data</Label>
+                <Input type="date" value={newTripForm.date}
+                  onChange={e => setNewTripForm({ ...newTripForm, date: e.target.value })} />
+              </div>
+              <div>
+                <Label>Horário de Saída</Label>
+                <Input type="time" value={newTripForm.departureTime}
+                  onChange={e => setNewTripForm({ ...newTripForm, departureTime: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label>Destino</Label>
+              <Input value={newTripForm.destination}
+                onChange={e => setNewTripForm({ ...newTripForm, destination: e.target.value })} />
+            </div>
+            <div>
+              <Label>Local da Consulta</Label>
+              <Input value={newTripForm.consultLocation}
+                onChange={e => setNewTripForm({ ...newTripForm, consultLocation: e.target.value })} />
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Textarea value={newTripForm.notes}
+                onChange={e => setNewTripForm({ ...newTripForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateTripOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateTrip} disabled={savingTrip}>
+              {savingTrip ? 'Criando...' : 'Criar Viagem'}
             </Button>
           </DialogFooter>
         </DialogContent>
