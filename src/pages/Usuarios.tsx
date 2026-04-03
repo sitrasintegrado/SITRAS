@@ -156,6 +156,7 @@ const Usuarios = () => {
     if (role === 'admin') return <Badge className="bg-primary text-primary-foreground">Administrador</Badge>;
     if (role === 'gestor') return <Badge className="bg-secondary text-secondary-foreground">Gestor de Frota</Badge>;
     if (role === 'motorista') return <Badge className="bg-accent text-accent-foreground">Motorista</Badge>;
+    if (role === 'marcador') return <Badge className="bg-primary/70 text-primary-foreground">Marcador</Badge>;
     return <Badge variant="outline">Visualizador</Badge>;
   };
 
@@ -236,6 +237,7 @@ const Usuarios = () => {
                     <SelectItem value="gestor">Gestor de Frota</SelectItem>
                     <SelectItem value="visualizador">Visualizador</SelectItem>
                     <SelectItem value="motorista">Motorista</SelectItem>
+                    <SelectItem value="marcador">Marcador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -271,6 +273,7 @@ const Usuarios = () => {
                     <SelectItem value="gestor">Gestor de Frota</SelectItem>
                     <SelectItem value="visualizador">Visualizador</SelectItem>
                     <SelectItem value="motorista">Motorista</SelectItem>
+                    <SelectItem value="marcador">Marcador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
