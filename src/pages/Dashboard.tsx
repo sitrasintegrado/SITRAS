@@ -56,7 +56,8 @@ const Dashboard = () => {
     const totalOccupied = todayTrips.reduce((s, t) =>
       s + t.passengers.reduce((ps, p) => ps + 1 + (p.hasCompanion ? 1 : 0), 0), 0);
     const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-    return { monthTrips: monthTrips.length, paxToday, availableVehicles, occupancyRate };
+    const awaitingDriver = trips.filter(t => t.status === 'Aguardando Motorista').length;
+    return { monthTrips: monthTrips.length, paxToday, availableVehicles, occupancyRate, awaitingDriver };
   }, [trips, vehicles, today]);
 
   const cnhAlerts = useMemo(() => {
@@ -190,7 +191,7 @@ const Dashboard = () => {
       </div>
 
       {/* Managerial Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="border-0 shadow-md bg-gradient-to-br from-card to-primary/5">
           <CardContent className="p-5 flex items-center gap-4">
             <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -244,6 +245,21 @@ const Dashboard = () => {
               <p className="text-3xl font-bold tracking-tight">{managerial.availableVehicles}</p>
               <p className="text-xs text-muted-foreground font-medium">Veículos disponíveis</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">de {vehicles.filter(v => v.status === 'Ativo').length} ativos</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`border-0 shadow-md bg-gradient-to-br ${managerial.awaitingDriver > 0 ? 'from-card to-destructive/10 border border-warning/30' : 'from-card to-muted/5'}`}>
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${managerial.awaitingDriver > 0 ? 'bg-warning/15' : 'bg-muted/10'}`}>
+              <Clock className={`h-6 w-6 ${managerial.awaitingDriver > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-3xl font-bold tracking-tight">{managerial.awaitingDriver}</p>
+              <p className="text-xs text-muted-foreground font-medium">Aguardando motorista</p>
+              {managerial.awaitingDriver > 0 && (
+                <p className="text-[10px] text-warning mt-0.5">Ação necessária</p>
+              )}
             </div>
           </CardContent>
         </Card>
