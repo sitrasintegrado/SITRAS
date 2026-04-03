@@ -232,9 +232,12 @@ const MarcadorPortal = () => {
 
       <div className="max-w-4xl mx-auto px-4 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3">
+          <TabsList className="w-full grid grid-cols-4">
             <TabsTrigger value="agendamentos" className="text-xs">
               <Bus className="h-4 w-4 mr-1" /> Ônibus
+            </TabsTrigger>
+            <TabsTrigger value="concluidas" className="text-xs">
+              <CheckCircle className="h-4 w-4 mr-1" /> Concluídas
             </TabsTrigger>
             <TabsTrigger value="solicitacoes" className="text-xs">
               <Send className="h-4 w-4 mr-1" /> Solicitações
