@@ -136,7 +136,6 @@ const MarcadorPortal = () => {
     const emptyForm = { vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '', passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] };
     setNewTripForm(emptyForm);
     await refetchTrips();
-    }
   };
 
   const handleSolicitar = async () => {
