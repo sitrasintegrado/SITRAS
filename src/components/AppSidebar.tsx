@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   LayoutDashboard, CalendarDays, Users, Car, UserCog, FileText,
-  ShieldCheck, LogOut, ChevronUp, Wrench, CalendarClock
+  ShieldCheck, LogOut, ChevronUp, Wrench, CalendarClock, ClipboardList
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
