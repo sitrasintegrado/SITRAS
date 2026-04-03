@@ -101,7 +101,8 @@ const MarcadorPortal = () => {
       return;
     }
     setSavingTrip(true);
-    const { data: tripData, error } = await supabase.from('trips').insert({
+    // Insert trip without .select() to avoid SELECT RLS issues
+    const { error } = await supabase.from('trips').insert({
       vehicle_id: newTripForm.vehicleId,
       date: newTripForm.date,
       departure_time: newTripForm.departureTime,
@@ -110,19 +111,30 @@ const MarcadorPortal = () => {
       notes: newTripForm.notes,
       status: 'Aguardando Motorista' as any,
       driver_id: null,
-    }).select().single();
+      transport_request_id: null,
+    });
 
-    if (error || !tripData) {
+    if (error) {
       setSavingTrip(false);
-      toast({ title: 'Erro ao criar viagem', description: error?.message, variant: 'destructive' });
+      toast({ title: 'Erro ao criar viagem', description: error.message, variant: 'destructive' });
       return;
     }
 
-    // Insert passengers
-    if (validPassengers.length > 0) {
+    // Fetch the newly created trip to get its ID for passengers
+    const { data: newTrips } = await supabase.from('trips')
+      .select('id')
+      .eq('vehicle_id', newTripForm.vehicleId)
+      .eq('date', newTripForm.date)
+      .eq('departure_time', newTripForm.departureTime)
+      .eq('status', 'Aguardando Motorista' as any)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const tripId = newTrips?.[0]?.id;
+    if (tripId && validPassengers.length > 0) {
       await supabase.from('trip_passengers').insert(
         validPassengers.map(p => ({
-          trip_id: tripData.id,
+          trip_id: tripId,
           patient_id: p.patientId,
           has_companion: p.hasCompanion,
           is_pcd: p.isPcd,
