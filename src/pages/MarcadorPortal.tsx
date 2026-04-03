@@ -89,8 +89,34 @@ const MarcadorPortal = () => {
       await refetchTrips();
     }
   };
+  const handleCreateTrip = async () => {
+    if (!newTripForm.vehicleId || !newTripForm.date) {
+      toast({ title: 'Selecione veículo e data', variant: 'destructive' });
+      return;
+    }
+    setSavingTrip(true);
+    const { error } = await supabase.from('trips').insert({
+      vehicle_id: newTripForm.vehicleId,
+      date: newTripForm.date,
+      departure_time: newTripForm.departureTime,
+      destination: newTripForm.destination,
+      consult_location: newTripForm.consultLocation,
+      notes: newTripForm.notes,
+      status: 'Aguardando Motorista' as any,
+      driver_id: null,
+    });
+    setSavingTrip(false);
+    if (error) {
+      toast({ title: 'Erro ao criar viagem', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Viagem de ônibus criada!' });
+      setCreateTripOpen(false);
+      setNewTripForm({ vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '' });
+      await refetchTrips();
+    }
+  };
 
-  const handleSolicitar = async () => {
+
     if (!solicitarForm.patientId || !solicitarForm.date) {
       toast({ title: 'Preencha paciente e data', variant: 'destructive' });
       return;
