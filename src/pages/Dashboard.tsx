@@ -56,7 +56,8 @@ const Dashboard = () => {
     const totalOccupied = todayTrips.reduce((s, t) =>
       s + t.passengers.reduce((ps, p) => ps + 1 + (p.hasCompanion ? 1 : 0), 0), 0);
     const occupancyRate = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-    return { monthTrips: monthTrips.length, paxToday, availableVehicles, occupancyRate };
+    const awaitingDriver = trips.filter(t => t.status === 'Aguardando Motorista').length;
+    return { monthTrips: monthTrips.length, paxToday, availableVehicles, occupancyRate, awaitingDriver };
   }, [trips, vehicles, today]);
 
   const cnhAlerts = useMemo(() => {
