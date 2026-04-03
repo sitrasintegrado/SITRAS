@@ -247,9 +247,7 @@ const MarcadorPortal = () => {
             <div>
               <Label>Paciente</Label>
               <BuscaPaciente
-                patients={patients}
-                selectedId={solicitarForm.patientId}
-                onSelect={(id) => setSolicitarForm({ ...solicitarForm, patientId: id })}
+                onSelectPaciente={(id) => setSolicitarForm({ ...solicitarForm, patientId: id })}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
