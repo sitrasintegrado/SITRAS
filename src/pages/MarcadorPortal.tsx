@@ -116,7 +116,7 @@ const MarcadorPortal = () => {
     }
   };
 
-
+  const handleSolicitar = async () => {
     if (!solicitarForm.patientId || !solicitarForm.date) {
       toast({ title: 'Preencha paciente e data', variant: 'destructive' });
       return;
