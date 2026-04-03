@@ -50,7 +50,19 @@ const MarcadorPortal = () => {
   // Bus vehicles available
   const busVehicles = useMemo(() => vehicles.filter(v => v.type === 'Ônibus' && v.status === 'Ativo'), [vehicles]);
   const busVehicleIds = useMemo(() => new Set(busVehicles.map(v => v.id)), [busVehicles]);
-  const busTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
+  const allBusTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
+  const busTrips = useMemo(() => allBusTrips.filter(t => t.status !== 'Concluída' && t.status !== 'Finalizada'), [allBusTrips]);
+  const concludedTrips = useMemo(() => allBusTrips.filter(t => t.status === 'Concluída' || t.status === 'Finalizada'), [allBusTrips]);
+
+  const handleMarkConcluded = async (tripId: string) => {
+    const { error } = await supabase.from('trips').update({ status: 'Concluída' as any }).eq('id', tripId);
+    if (error) {
+      toast({ title: 'Erro ao concluir viagem', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Viagem marcada como concluída!' });
+      await refetchTrips();
+    }
+  };
 
   const openAddPassenger = (tripId: string) => {
     setSelectedTripId(tripId);
@@ -220,9 +232,12 @@ const MarcadorPortal = () => {
 
       <div className="max-w-4xl mx-auto px-4 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-3">
+          <TabsList className="w-full grid grid-cols-4">
             <TabsTrigger value="agendamentos" className="text-xs">
               <Bus className="h-4 w-4 mr-1" /> Ônibus
+            </TabsTrigger>
+            <TabsTrigger value="concluidas" className="text-xs">
+              <CheckCircle className="h-4 w-4 mr-1" /> Concluídas
             </TabsTrigger>
             <TabsTrigger value="solicitacoes" className="text-xs">
               <Send className="h-4 w-4 mr-1" /> Solicitações
@@ -300,6 +315,63 @@ const MarcadorPortal = () => {
                         <Button size="sm" variant="outline" className="w-full" onClick={() => openAddPassenger(trip.id)}>
                           <UserPlus className="h-4 w-4 mr-1" /> Adicionar Paciente
                         </Button>
+                      )}
+
+                      {trip.status !== 'Concluída' && trip.status !== 'Finalizada' && trip.status !== 'Cancelada' && (
+                        <Button size="sm" variant="secondary" className="w-full" onClick={() => handleMarkConcluded(trip.id)}>
+                          <CheckCircle className="h-4 w-4 mr-1" /> Marcar como Concluída
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
+
+          {/* Viagens Concluídas */}
+          <TabsContent value="concluidas" className="space-y-4 mt-4">
+            <h2 className="text-lg font-bold">Viagens Concluídas</h2>
+            {concludedTrips.length === 0 ? (
+              <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem concluída.</CardContent></Card>
+            ) : (
+              concludedTrips.map(trip => {
+                const vehicle = vehicles.find(v => v.id === trip.vehicleId);
+                const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
+                return (
+                  <Card key={trip.id} className="opacity-80">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {trip.departureTime} — {trip.destination}
+                        </CardTitle>
+                        <Badge variant="outline" className="text-[10px] bg-secondary/15 text-secondary border-secondary/30">
+                          {trip.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                        <span>Veículo: {vehicle?.type} {vehicle?.plate}</span>
+                        <span>Data: {trip.date.split('-').reverse().join('/')}</span>
+                        <span>Passageiros: {seats}</span>
+                      </div>
+                      {trip.passengers.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium flex items-center gap-1"><Users className="h-3 w-3" /> Passageiros:</p>
+                          {trip.passengers.map((p, i) => {
+                            const pat = patients.find(pt => pt.id === p.patientId);
+                            return (
+                              <div key={i} className="bg-muted/50 rounded px-2 py-1">
+                                <span className="text-xs">
+                                  {pat?.name || 'Paciente'}
+                                  {p.hasCompanion && <Badge variant="outline" className="ml-1 text-[9px]">+Acomp.</Badge>}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </CardContent>
                   </Card>
