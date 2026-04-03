@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrips, useVehicles, usePatients } from '@/hooks/use-supabase-data';
 import { useTransportRequests } from '@/hooks/use-transport-requests';
