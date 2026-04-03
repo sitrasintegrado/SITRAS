@@ -51,7 +51,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const { user, role, canManageUsers, signOut } = useAuth();
+  const { user, role, canManageUsers, canViewPendingRequests, signOut } = useAuth();
 
   const mainItems = [
     { title: 'Painel', url: '/', icon: LayoutDashboard },
