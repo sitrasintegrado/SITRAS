@@ -10,8 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+type VehicleType = 'Carro' | 'Van' | 'Ambulância';
+const EXTRA_VEHICLE_TYPES: VehicleType[] = ['Carro', 'Van', 'Ambulância'];
 
 interface UserProfile {
   id: string;
@@ -35,8 +39,8 @@ const Usuarios = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserProfile | null>(null);
-  const [newForm, setNewForm] = useState({ email: '', password: '', full_name: '', role: 'visualizador' as AppRole, driverId: '' });
-  const [editForm, setEditForm] = useState({ full_name: '', role: 'visualizador' as AppRole, active: true, driverId: '' });
+  const [newForm, setNewForm] = useState({ email: '', password: '', full_name: '', role: 'visualizador' as AppRole, driverId: '', vehiclePerms: [] as VehicleType[] });
+  const [editForm, setEditForm] = useState({ full_name: '', role: 'visualizador' as AppRole, active: true, driverId: '', vehiclePerms: [] as VehicleType[] });
 
   const fetchUsers = useCallback(async () => {
     const { data: profiles } = await supabase.from('profiles').select('*');
@@ -62,23 +66,36 @@ const Usuarios = () => {
 
   useEffect(() => { fetchUsers(); fetchDrivers(); }, [fetchUsers, fetchDrivers]);
 
+  const fetchVehiclePerms = async (userId: string): Promise<VehicleType[]> => {
+    const { data } = await supabase.from('marcador_vehicle_permissions').select('vehicle_type').eq('user_id', userId);
+    return (data || []).map((r: any) => r.vehicle_type as VehicleType);
+  };
+
+  const saveVehiclePerms = async (userId: string, perms: VehicleType[]) => {
+    await supabase.from('marcador_vehicle_permissions').delete().eq('user_id', userId);
+    if (perms.length > 0) {
+      await supabase.from('marcador_vehicle_permissions').insert(
+        perms.map(vt => ({ user_id: userId, vehicle_type: vt as any }))
+      );
+    }
+  };
+
   const openNew = () => {
     setEditUser(null);
-    setNewForm({ email: '', password: '', full_name: '', role: 'visualizador', driverId: '' });
+    setNewForm({ email: '', password: '', full_name: '', role: 'visualizador', driverId: '', vehiclePerms: [] });
     setDialogOpen(true);
   };
 
-  const openEdit = (u: UserProfile) => {
+  const openEdit = async (u: UserProfile) => {
     setEditUser(u);
     const linkedDriver = drivers.find(d => d.user_id === u.id);
-    setEditForm({ full_name: u.full_name, role: u.role || 'visualizador', active: u.active, driverId: linkedDriver?.id || '' });
+    const perms = u.role === 'marcador' ? await fetchVehiclePerms(u.id) : [];
+    setEditForm({ full_name: u.full_name, role: u.role || 'visualizador', active: u.active, driverId: linkedDriver?.id || '', vehiclePerms: perms });
     setDialogOpen(true);
   };
 
   const linkDriverToUser = async (driverId: string, userId: string) => {
-    // Unlink any previous driver from this user
     await supabase.from('drivers').update({ user_id: null } as any).eq('user_id', userId);
-    // Link selected driver
     if (driverId) {
       await supabase.from('drivers').update({ user_id: userId } as any).eq('id', driverId);
     }
@@ -100,9 +117,11 @@ const Usuarios = () => {
       toast({ title: 'Erro ao criar usuário', description: error.message, variant: 'destructive' });
       return;
     }
-    // Link driver if motorista
     if (newForm.role === 'motorista' && newForm.driverId && data?.user?.id) {
       await linkDriverToUser(newForm.driverId, data.user.id);
+    }
+    if (newForm.role === 'marcador' && data?.user?.id) {
+      await saveVehiclePerms(data.user.id, newForm.vehiclePerms);
     }
     toast({ title: 'Usuário criado com sucesso' });
     setDialogOpen(false);
@@ -126,12 +145,19 @@ const Usuarios = () => {
       await supabase.from('user_roles').insert({ user_id: editUser.id, role: editForm.role });
     }
 
-    // Handle driver linking
     if (editForm.role === 'motorista') {
       await linkDriverToUser(editForm.driverId, editUser.id);
     } else {
-      // Unlink if role changed away from motorista
       await supabase.from('drivers').update({ user_id: null } as any).eq('user_id', editUser.id);
+    }
+
+    if (editForm.role === 'marcador') {
+      await saveVehiclePerms(editUser.id, editForm.vehiclePerms);
+    } else {
+      // Clean up perms if role changed away from marcador
+      if (editUser.role === 'marcador') {
+        await supabase.from('marcador_vehicle_permissions').delete().eq('user_id', editUser.id);
+      }
     }
 
     toast({ title: 'Usuário atualizado' });
@@ -160,9 +186,43 @@ const Usuarios = () => {
     return <Badge variant="outline">Visualizador</Badge>;
   };
 
-  // Available drivers = those not linked to another user (or linked to current edit user)
   const availableDrivers = (currentUserId?: string) =>
     drivers.filter(d => !d.user_id || d.user_id === currentUserId);
+
+  const toggleVehiclePerm = (form: 'new' | 'edit', vt: VehicleType) => {
+    if (form === 'new') {
+      const perms = newForm.vehiclePerms.includes(vt)
+        ? newForm.vehiclePerms.filter(v => v !== vt)
+        : [...newForm.vehiclePerms, vt];
+      setNewForm({ ...newForm, vehiclePerms: perms });
+    } else {
+      const perms = editForm.vehiclePerms.includes(vt)
+        ? editForm.vehiclePerms.filter(v => v !== vt)
+        : [...editForm.vehiclePerms, vt];
+      setEditForm({ ...editForm, vehiclePerms: perms });
+    }
+  };
+
+  const VehiclePermSection = ({ formType }: { formType: 'new' | 'edit' }) => {
+    const perms = formType === 'new' ? newForm.vehiclePerms : editForm.vehiclePerms;
+    return (
+      <div className="space-y-2">
+        <Label>Permissões de veículos</Label>
+        <p className="text-xs text-muted-foreground">Ônibus é permitido por padrão. Marque os tipos adicionais:</p>
+        <div className="flex flex-wrap gap-4">
+          {EXTRA_VEHICLE_TYPES.map(vt => (
+            <div key={vt} className="flex items-center gap-2">
+              <Checkbox
+                checked={perms.includes(vt)}
+                onCheckedChange={() => toggleVehiclePerm(formType, vt)}
+              />
+              <Label className="text-sm font-normal">{vt}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (!canManageUsers) {
     return <div className="p-8 text-center text-muted-foreground">Acesso restrito a administradores.</div>;
@@ -254,6 +314,7 @@ const Usuarios = () => {
                   </Select>
                 </div>
               )}
+              {editForm.role === 'marcador' && <VehiclePermSection formType="edit" />}
               <div className="flex items-center gap-2">
                 <Switch checked={editForm.active} onCheckedChange={v => setEditForm({ ...editForm, active: v })} />
                 <Label>Usuário ativo</Label>
@@ -290,6 +351,7 @@ const Usuarios = () => {
                   </Select>
                 </div>
               )}
+              {newForm.role === 'marcador' && <VehiclePermSection formType="new" />}
             </div>
           )}
 
