@@ -46,6 +46,17 @@ export interface Driver {
 export interface TripPassenger {
   patientId: string;
   hasCompanion: boolean;
+  boardingLocation?: string;
+  consultTime?: string;
+  consultLocation?: string;
+}
+
+export interface FixedTrip {
+  id: string;
+  label: string;
+  departureTime: string;
+  defaultDestination: string;
+  isActive: boolean;
 }
 
 export interface Trip {
