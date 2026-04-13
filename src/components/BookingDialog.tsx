@@ -112,10 +112,10 @@ export default function BookingDialog({ open, onOpenChange, trips, fixedTrips, o
           }
 
           // Fetch the newly created trip
-          const { data: newTrips } = await supabase.from('trips')
+          const { data: newTrips } = await (supabase.from('trips') as any)
             .select('id')
             .eq('date', form.date)
-            .eq('fixed_trip_id' as any, ft.id)
+            .eq('fixed_trip_id', ft.id)
             .order('created_at', { ascending: false })
             .limit(1);
 
