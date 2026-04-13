@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Patient, Vehicle, Driver, Trip, TripPassenger, Maintenance } from '@/types';
+import { Patient, Vehicle, Driver, Trip, TripPassenger, Maintenance, FixedTrip } from '@/types';
 
 // ── Patients ──
 export function usePatients() {
@@ -129,7 +129,13 @@ export function useTrips() {
     const passMap = new Map<string, TripPassenger[]>();
     (passengersData || []).forEach(p => {
       const arr = passMap.get(p.trip_id) || [];
-      arr.push({ patientId: p.patient_id, hasCompanion: p.has_companion });
+      arr.push({
+        patientId: p.patient_id,
+        hasCompanion: p.has_companion,
+        boardingLocation: (p as any).boarding_location || '',
+        consultTime: (p as any).consult_time || '',
+        consultLocation: (p as any).consult_location || '',
+      });
       passMap.set(p.trip_id, arr);
     });
 
@@ -144,6 +150,7 @@ export function useTrips() {
       passengers: passMap.get(r.id) || [],
       notes: r.notes,
       status: r.status as Trip['status'],
+      fixedTripId: (r as any).fixed_trip_id || '',
     })));
     setLoading(false);
   }, []);
@@ -331,4 +338,26 @@ export function useBancoHoras(driverId?: string) {
   };
 
   return { registros, loading, save, update, remove, refetch: fetch };
+}
+
+// ── Fixed Trips ──
+export function useFixedTrips() {
+  const [fixedTrips, setFixedTrips] = useState<FixedTrip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    const { data } = await supabase.from('fixed_trips' as any).select('*').order('departure_time');
+    if (data) setFixedTrips((data as any[]).map(r => ({
+      id: r.id,
+      label: r.label,
+      departureTime: r.departure_time || '',
+      defaultDestination: r.default_destination || '',
+      isActive: r.is_active,
+    })));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { fixedTrips, loading, refetch: fetch };
 }
