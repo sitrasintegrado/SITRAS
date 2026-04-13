@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTrips, useVehicles, usePatients } from '@/hooks/use-supabase-data';
+import { useTrips, useVehicles, usePatients, useFixedTrips } from '@/hooks/use-supabase-data';
 import { useTransportRequests } from '@/hooks/use-transport-requests';
 import { useNotifications } from '@/hooks/use-notifications';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,8 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { BuscaPaciente } from '@/components/BuscaPaciente';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, Bus, Send, Bell, CalendarDays, Clock, MapPin, Plus, CheckCircle, UserPlus, Trash2, Users } from 'lucide-react';
+import { LogOut, Bus, Send, Bell, CalendarDays, Clock, MapPin, Plus, CheckCircle, Users, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import BookingDialog from '@/components/BookingDialog';
 import logo from '@/assets/logo.png';
 
 const MarcadorPortal = () => {
@@ -25,34 +26,39 @@ const MarcadorPortal = () => {
   const { trips, refetch: refetchTrips } = useTrips();
   const { vehicles } = useVehicles();
   const { patients } = usePatients();
+  const { fixedTrips } = useFixedTrips();
   const { requests, create: createRequest } = useTransportRequests();
   const { notifications, unreadCount, markAsRead } = useNotifications();
 
   const [activeTab, setActiveTab] = useState('agendamentos');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tripFilter, setTripFilter] = useState('all');
+  const [bookingOpen, setBookingOpen] = useState(false);
   const [solicitarOpen, setSolicitarOpen] = useState(false);
-  const [addPassengerOpen, setAddPassengerOpen] = useState(false);
-  const [createTripOpen, setCreateTripOpen] = useState(false);
-  const [selectedTripId, setSelectedTripId] = useState('');
-  const [newPassenger, setNewPassenger] = useState({ patientId: '', hasCompanion: false, isPcd: false });
-  const [savingPassenger, setSavingPassenger] = useState(false);
-  const [savingTrip, setSavingTrip] = useState(false);
-  const [newTripForm, setNewTripForm] = useState({
-    vehicleId: '', date: new Date().toISOString().split('T')[0],
-    departureTime: '06:00', destination: '', consultLocation: '', notes: '',
-    passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] as { patientId: string; hasCompanion: boolean; isPcd: boolean }[],
-  });
   const [solicitarForm, setSolicitarForm] = useState({
     patientId: '', date: new Date().toISOString().split('T')[0],
     consultTime: '', destination: '', consultLocation: '',
     hasCompanion: false, notes: '',
   });
 
-  // Bus vehicles available
-  const busVehicles = useMemo(() => vehicles.filter(v => v.type === 'Ônibus' && v.status === 'Ativo'), [vehicles]);
-  const busVehicleIds = useMemo(() => new Set(busVehicles.map(v => v.id)), [busVehicles]);
-  const allBusTrips = useMemo(() => trips.filter(t => busVehicleIds.has(t.vehicleId)), [trips, busVehicleIds]);
-  const busTrips = useMemo(() => allBusTrips.filter(t => t.status !== 'Concluída' && t.status !== 'Finalizada'), [allBusTrips]);
-  const concludedTrips = useMemo(() => allBusTrips.filter(t => t.status === 'Concluída' || t.status === 'Finalizada'), [allBusTrips]);
+  // Filter trips for selected date
+  const dateTrips = useMemo(() => {
+    return trips.filter(t =>
+      t.date === selectedDate &&
+      t.status !== 'Cancelada' && t.status !== 'Concluída' && t.status !== 'Finalizada'
+    );
+  }, [trips, selectedDate]);
+
+  // Apply trip filter
+  const filteredTrips = useMemo(() => {
+    if (tripFilter === 'all') return dateTrips;
+    return dateTrips.filter(t => t.fixedTripId === tripFilter);
+  }, [dateTrips, tripFilter]);
+
+  // Concluded trips
+  const concludedTrips = useMemo(() => {
+    return trips.filter(t => t.status === 'Concluída' || t.status === 'Finalizada');
+  }, [trips]);
 
   const handleMarkConcluded = async (tripId: string) => {
     const { error } = await supabase.from('trips').update({ status: 'Concluída' as any }).eq('id', tripId);
@@ -60,34 +66,6 @@ const MarcadorPortal = () => {
       toast({ title: 'Erro ao concluir viagem', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Viagem marcada como concluída!' });
-      await refetchTrips();
-    }
-  };
-
-  const openAddPassenger = (tripId: string) => {
-    setSelectedTripId(tripId);
-    setNewPassenger({ patientId: '', hasCompanion: false, isPcd: false });
-    setAddPassengerOpen(true);
-  };
-
-  const handleAddPassenger = async () => {
-    if (!newPassenger.patientId) {
-      toast({ title: 'Selecione um paciente', variant: 'destructive' });
-      return;
-    }
-    setSavingPassenger(true);
-    const { error } = await supabase.from('trip_passengers').insert({
-      trip_id: selectedTripId,
-      patient_id: newPassenger.patientId,
-      has_companion: newPassenger.hasCompanion,
-      is_pcd: newPassenger.isPcd,
-    });
-    setSavingPassenger(false);
-    if (error) {
-      toast({ title: 'Erro ao adicionar passageiro', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Passageiro adicionado!' });
-      setAddPassengerOpen(false);
       await refetchTrips();
     }
   };
@@ -101,65 +79,6 @@ const MarcadorPortal = () => {
       toast({ title: 'Passageiro removido' });
       await refetchTrips();
     }
-  };
-  const handleCreateTrip = async () => {
-    if (!newTripForm.vehicleId || !newTripForm.date) {
-      toast({ title: 'Selecione veículo e data', variant: 'destructive' });
-      return;
-    }
-    const validPassengers = newTripForm.passengers.filter(p => p.patientId);
-    if (validPassengers.length === 0) {
-      toast({ title: 'Adicione pelo menos um paciente', variant: 'destructive' });
-      return;
-    }
-    setSavingTrip(true);
-    // Insert trip without .select() to avoid SELECT RLS issues
-    const { error } = await supabase.from('trips').insert({
-      vehicle_id: newTripForm.vehicleId,
-      date: newTripForm.date,
-      departure_time: newTripForm.departureTime,
-      destination: newTripForm.destination,
-      consult_location: newTripForm.consultLocation,
-      notes: newTripForm.notes,
-      status: 'Aguardando Motorista' as any,
-      driver_id: null,
-      transport_request_id: null,
-    });
-
-    if (error) {
-      setSavingTrip(false);
-      toast({ title: 'Erro ao criar viagem', description: error.message, variant: 'destructive' });
-      return;
-    }
-
-    // Fetch the newly created trip to get its ID for passengers
-    const { data: newTrips } = await supabase.from('trips')
-      .select('id')
-      .eq('vehicle_id', newTripForm.vehicleId)
-      .eq('date', newTripForm.date)
-      .eq('departure_time', newTripForm.departureTime)
-      .eq('status', 'Aguardando Motorista' as any)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const tripId = newTrips?.[0]?.id;
-    if (tripId && validPassengers.length > 0) {
-      await supabase.from('trip_passengers').insert(
-        validPassengers.map(p => ({
-          trip_id: tripId,
-          patient_id: p.patientId,
-          has_companion: p.hasCompanion,
-          is_pcd: p.isPcd,
-        }))
-      );
-    }
-
-    setSavingTrip(false);
-    toast({ title: 'Viagem de ônibus criada!' });
-    setCreateTripOpen(false);
-    const emptyForm = { vehicleId: '', date: new Date().toISOString().split('T')[0], departureTime: '06:00', destination: '', consultLocation: '', notes: '', passengers: [{ patientId: '', hasCompanion: false, isPcd: false }] };
-    setNewTripForm(emptyForm);
-    await refetchTrips();
   };
 
   const handleSolicitar = async () => {
@@ -190,10 +109,87 @@ const MarcadorPortal = () => {
 
   const tripStatusColor = (s: string) => {
     if (s === 'Aguardando Motorista') return 'bg-warning/15 text-warning border-warning/30';
-    if (s === 'Confirmada') return 'bg-info/15 text-info border-info/30';
+    if (s === 'Confirmada') return 'bg-primary/15 text-primary border-primary/30';
     if (s === 'Em andamento') return 'bg-primary/15 text-primary border-primary/30';
     if (s === 'Finalizada' || s === 'Concluída') return 'bg-secondary/15 text-secondary border-secondary/30';
     return 'bg-muted text-muted-foreground';
+  };
+
+  const getFixedTripLabel = (fixedTripId?: string) => {
+    if (!fixedTripId) return null;
+    return fixedTrips.find(ft => ft.id === fixedTripId)?.label || null;
+  };
+
+  const renderTripCard = (trip: typeof trips[0], showConcludeButton: boolean, showRemovePassenger: boolean) => {
+    const vehicle = vehicles.find(v => v.id === trip.vehicleId);
+    const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
+    const ftLabel = getFixedTripLabel(trip.fixedTripId);
+
+    return (
+      <Card key={trip.id}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              {ftLabel ? (
+                <span>{ftLabel} — {trip.departureTime}</span>
+              ) : (
+                <span>{trip.departureTime} — {trip.destination}</span>
+              )}
+            </CardTitle>
+            <Badge variant="outline" className={`text-[10px] ${tripStatusColor(trip.status)}`}>
+              {trip.status}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+            {vehicle && <span>Veículo: {vehicle.type} {vehicle.plate}</span>}
+            <span>Data: {trip.date.split('-').reverse().join('/')}</span>
+            {trip.destination && <span>Destino: {trip.destination}</span>}
+            <span>Passageiros: {seats}</span>
+          </div>
+
+          {trip.passengers.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium flex items-center gap-1"><Users className="h-3 w-3" /> Passageiros:</p>
+              {trip.passengers.map((p, i) => {
+                const pat = patients.find(pt => pt.id === p.patientId);
+                return (
+                  <div key={i} className="flex items-center justify-between bg-muted/50 rounded px-2 py-1">
+                    <div className="text-xs space-y-0.5">
+                      <span className="font-medium">{pat?.name || 'Paciente'}</span>
+                      {p.hasCompanion && <Badge variant="outline" className="ml-1 text-[9px]">+Acomp.</Badge>}
+                      {p.boardingLocation && (
+                        <span className="ml-2 text-muted-foreground"><MapPin className="h-3 w-3 inline" /> {p.boardingLocation}</span>
+                      )}
+                      {p.consultTime && (
+                        <span className="ml-2 text-muted-foreground"><Clock className="h-3 w-3 inline" /> {p.consultTime}</span>
+                      )}
+                      {p.consultLocation && (
+                        <span className="ml-2 text-muted-foreground">{p.consultLocation}</span>
+                      )}
+                    </div>
+                    {showRemovePassenger && trip.status === 'Aguardando Motorista' && (
+                      <Button size="icon" variant="ghost" className="h-6 w-6"
+                        onClick={() => handleRemovePassenger(trip.id, p.patientId)}>
+                        <span className="text-destructive text-xs">✕</span>
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {showConcludeButton && trip.status !== 'Concluída' && trip.status !== 'Finalizada' && trip.status !== 'Cancelada' && (
+            <Button size="sm" variant="secondary" className="w-full" onClick={() => handleMarkConcluded(trip.id)}>
+              <CheckCircle className="h-4 w-4 mr-1" /> Marcar como Concluída
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -234,7 +230,7 @@ const MarcadorPortal = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full grid grid-cols-4">
             <TabsTrigger value="agendamentos" className="text-xs">
-              <Bus className="h-4 w-4 mr-1" /> Ônibus
+              <Bus className="h-4 w-4 mr-1" /> Viagens
             </TabsTrigger>
             <TabsTrigger value="concluidas" className="text-xs">
               <CheckCircle className="h-4 w-4 mr-1" /> Concluídas
@@ -252,135 +248,58 @@ const MarcadorPortal = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Agendamentos de Ônibus */}
+          {/* === TAB: Viagens do Dia === */}
           <TabsContent value="agendamentos" className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">Viagens de Ônibus</h2>
-              <Button size="sm" onClick={() => setCreateTripOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Nova Viagem
+            {/* Date picker + filter + button */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <Input type="date" className="w-auto" value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={tripFilter} onValueChange={setTripFilter}>
+                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as viagens</SelectItem>
+                    {fixedTrips.filter(ft => ft.isActive).map(ft => (
+                      <SelectItem key={ft.id} value={ft.id}>{ft.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button size="sm" className="ml-auto" onClick={() => setBookingOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Marcação
               </Button>
             </div>
-            {busTrips.length === 0 ? (
-              <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem de ônibus disponível.</CardContent></Card>
+
+            {filteredTrips.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  Nenhuma viagem para {selectedDate.split('-').reverse().join('/')}.
+                  <br />
+                  <Button size="sm" variant="link" onClick={() => setBookingOpen(true)}>
+                    Criar uma marcação para gerar a viagem automaticamente
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
-              busTrips.map(trip => {
-                const vehicle = vehicles.find(v => v.id === trip.vehicleId);
-                const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
-                const canAddPassenger = trip.status === 'Aguardando Motorista';
-                return (
-                  <Card key={trip.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-primary" />
-                          {trip.departureTime} — {trip.destination}
-                        </CardTitle>
-                        <Badge variant="outline" className={`text-[10px] ${tripStatusColor(trip.status)}`}>
-                          {trip.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                        <span>Veículo: {vehicle?.type} {vehicle?.plate}</span>
-                        <span>Data: {trip.date.split('-').reverse().join('/')}</span>
-                        <span>Ocupação: {seats}/{vehicle?.capacity || '?'}</span>
-                      </div>
-
-                      {/* Passenger list */}
-                      {trip.passengers.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-xs font-medium flex items-center gap-1"><Users className="h-3 w-3" /> Passageiros:</p>
-                          {trip.passengers.map((p, i) => {
-                            const pat = patients.find(pt => pt.id === p.patientId);
-                            return (
-                              <div key={i} className="flex items-center justify-between bg-muted/50 rounded px-2 py-1">
-                                <span className="text-xs">
-                                  {pat?.name || 'Paciente'}
-                                  {p.hasCompanion && <Badge variant="outline" className="ml-1 text-[9px]">+Acomp.</Badge>}
-                                </span>
-                                {canAddPassenger && (
-                                  <Button size="icon" variant="ghost" className="h-6 w-6"
-                                    onClick={() => handleRemovePassenger(trip.id, p.patientId)}>
-                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {canAddPassenger && (
-                        <Button size="sm" variant="outline" className="w-full" onClick={() => openAddPassenger(trip.id)}>
-                          <UserPlus className="h-4 w-4 mr-1" /> Adicionar Paciente
-                        </Button>
-                      )}
-
-                      {trip.status !== 'Concluída' && trip.status !== 'Finalizada' && trip.status !== 'Cancelada' && (
-                        <Button size="sm" variant="secondary" className="w-full" onClick={() => handleMarkConcluded(trip.id)}>
-                          <CheckCircle className="h-4 w-4 mr-1" /> Marcar como Concluída
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })
+              filteredTrips.map(trip => renderTripCard(trip, true, true))
             )}
           </TabsContent>
 
-          {/* Viagens Concluídas */}
+          {/* === TAB: Concluídas === */}
           <TabsContent value="concluidas" className="space-y-4 mt-4">
             <h2 className="text-lg font-bold">Viagens Concluídas</h2>
             {concludedTrips.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma viagem concluída.</CardContent></Card>
             ) : (
-              concludedTrips.map(trip => {
-                const vehicle = vehicles.find(v => v.id === trip.vehicleId);
-                const seats = trip.passengers.reduce((s, p) => s + 1 + (p.hasCompanion ? 1 : 0), 0);
-                return (
-                  <Card key={trip.id} className="opacity-80">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          {trip.departureTime} — {trip.destination}
-                        </CardTitle>
-                        <Badge variant="outline" className="text-[10px] bg-secondary/15 text-secondary border-secondary/30">
-                          {trip.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                        <span>Veículo: {vehicle?.type} {vehicle?.plate}</span>
-                        <span>Data: {trip.date.split('-').reverse().join('/')}</span>
-                        <span>Passageiros: {seats}</span>
-                      </div>
-                      {trip.passengers.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-xs font-medium flex items-center gap-1"><Users className="h-3 w-3" /> Passageiros:</p>
-                          {trip.passengers.map((p, i) => {
-                            const pat = patients.find(pt => pt.id === p.patientId);
-                            return (
-                              <div key={i} className="bg-muted/50 rounded px-2 py-1">
-                                <span className="text-xs">
-                                  {pat?.name || 'Paciente'}
-                                  {p.hasCompanion && <Badge variant="outline" className="ml-1 text-[9px]">+Acomp.</Badge>}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })
+              concludedTrips.map(trip => renderTripCard(trip, false, false))
             )}
           </TabsContent>
 
-          {/* Solicitações */}
+          {/* === TAB: Solicitações === */}
           <TabsContent value="solicitacoes" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">Minhas Solicitações</h2>
@@ -416,7 +335,7 @@ const MarcadorPortal = () => {
             )}
           </TabsContent>
 
-          {/* Notificações */}
+          {/* === TAB: Notificações === */}
           <TabsContent value="notificacoes" className="space-y-3 mt-4">
             <h2 className="text-lg font-bold">Notificações</h2>
             {notifications.length === 0 ? (
@@ -443,38 +362,15 @@ const MarcadorPortal = () => {
         </Tabs>
       </div>
 
-      {/* Dialog Adicionar Passageiro */}
-      <Dialog open={addPassengerOpen} onOpenChange={setAddPassengerOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Adicionar Paciente ao Ônibus</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Paciente</Label>
-              <BuscaPaciente onSelectPaciente={(id) => setNewPassenger({ ...newPassenger, patientId: id })} />
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox checked={newPassenger.hasCompanion}
-                  onCheckedChange={(c) => setNewPassenger({ ...newPassenger, hasCompanion: !!c })} />
-                <Label className="text-sm">Acompanhante</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={newPassenger.isPcd}
-                  onCheckedChange={(c) => setNewPassenger({ ...newPassenger, isPcd: !!c })} />
-                <Label className="text-sm">PCD</Label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddPassengerOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAddPassenger} disabled={savingPassenger}>
-              {savingPassenger ? 'Salvando...' : 'Adicionar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Booking Dialog */}
+      <BookingDialog
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        trips={trips}
+        fixedTrips={fixedTrips}
+        onSaved={refetchTrips}
+        selectedDate={selectedDate}
+      />
 
       {/* Dialog Solicitar Veículo */}
       <Dialog open={solicitarOpen} onOpenChange={setSolicitarOpen}>
@@ -524,111 +420,6 @@ const MarcadorPortal = () => {
             <Button variant="outline" onClick={() => setSolicitarOpen(false)}>Cancelar</Button>
             <Button onClick={handleSolicitar}>
               <Send className="h-4 w-4 mr-1" /> Enviar Solicitação
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog Criar Viagem de Ônibus */}
-      <Dialog open={createTripOpen} onOpenChange={setCreateTripOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nova Viagem de Ônibus</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Ônibus</Label>
-              <Select value={newTripForm.vehicleId} onValueChange={v => setNewTripForm({ ...newTripForm, vehicleId: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione o ônibus" /></SelectTrigger>
-                <SelectContent>
-                  {busVehicles.map(v => (
-                    <SelectItem key={v.id} value={v.id}>{v.plate} — {v.modelo || v.type} ({v.capacity} lugares)</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Data</Label>
-                <Input type="date" value={newTripForm.date}
-                  onChange={e => setNewTripForm({ ...newTripForm, date: e.target.value })} />
-              </div>
-              <div>
-                <Label>Horário de Saída</Label>
-                <Input type="time" value={newTripForm.departureTime}
-                  onChange={e => setNewTripForm({ ...newTripForm, departureTime: e.target.value })} />
-              </div>
-            </div>
-            <div>
-              <Label>Destino</Label>
-              <Input value={newTripForm.destination}
-                onChange={e => setNewTripForm({ ...newTripForm, destination: e.target.value })} />
-            </div>
-            <div>
-              <Label>Local da Consulta</Label>
-              <Input value={newTripForm.consultLocation}
-                onChange={e => setNewTripForm({ ...newTripForm, consultLocation: e.target.value })} />
-            </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea value={newTripForm.notes}
-                onChange={e => setNewTripForm({ ...newTripForm, notes: e.target.value })} />
-            </div>
-
-            {/* Passageiros */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Passageiros</Label>
-                <Button type="button" size="sm" variant="outline" onClick={() =>
-                  setNewTripForm({ ...newTripForm, passengers: [...newTripForm.passengers, { patientId: '', hasCompanion: false, isPcd: false }] })
-                }>
-                  <Plus className="h-3 w-3 mr-1" /> Adicionar
-                </Button>
-              </div>
-              {newTripForm.passengers.map((pax, idx) => (
-                <div key={idx} className="border rounded-md p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">Paciente {idx + 1}</span>
-                    {newTripForm.passengers.length > 1 && (
-                      <Button type="button" size="icon" variant="ghost" className="h-6 w-6"
-                        onClick={() => setNewTripForm({ ...newTripForm, passengers: newTripForm.passengers.filter((_, i) => i !== idx) })}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                  <BuscaPaciente onSelectPaciente={(id) => {
-                    const updated = [...newTripForm.passengers];
-                    updated[idx] = { ...updated[idx], patientId: id };
-                    setNewTripForm({ ...newTripForm, passengers: updated });
-                  }} />
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                      <Checkbox checked={pax.hasCompanion}
-                        onCheckedChange={(c) => {
-                          const updated = [...newTripForm.passengers];
-                          updated[idx] = { ...updated[idx], hasCompanion: !!c };
-                          setNewTripForm({ ...newTripForm, passengers: updated });
-                        }} />
-                      <Label className="text-xs">Acompanhante</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox checked={pax.isPcd}
-                        onCheckedChange={(c) => {
-                          const updated = [...newTripForm.passengers];
-                          updated[idx] = { ...updated[idx], isPcd: !!c };
-                          setNewTripForm({ ...newTripForm, passengers: updated });
-                        }} />
-                      <Label className="text-xs">PCD</Label>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateTripOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateTrip} disabled={savingTrip}>
-              {savingTrip ? 'Criando...' : 'Criar Viagem'}
             </Button>
           </DialogFooter>
         </DialogContent>
