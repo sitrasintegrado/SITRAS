@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Patient, Vehicle, Driver, Trip, TripPassenger, Maintenance } from '@/types';
+import { Patient, Vehicle, Driver, Trip, TripPassenger, Maintenance, FixedTrip } from '@/types';
 
 // ── Patients ──
 export function usePatients() {
@@ -129,7 +129,13 @@ export function useTrips() {
     const passMap = new Map<string, TripPassenger[]>();
     (passengersData || []).forEach(p => {
       const arr = passMap.get(p.trip_id) || [];
-      arr.push({ patientId: p.patient_id, hasCompanion: p.has_companion });
+      arr.push({
+        patientId: p.patient_id,
+        hasCompanion: p.has_companion,
+        boardingLocation: (p as any).boarding_location || '',
+        consultTime: (p as any).consult_time || '',
+        consultLocation: (p as any).consult_location || '',
+      });
       passMap.set(p.trip_id, arr);
     });
 
