@@ -117,6 +117,33 @@ export type Database = {
         }
         Relationships: []
       }
+      fixed_trips: {
+        Row: {
+          created_at: string
+          default_destination: string
+          departure_time: string
+          id: string
+          is_active: boolean
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          default_destination?: string
+          departure_time?: string
+          id?: string
+          is_active?: boolean
+          label: string
+        }
+        Update: {
+          created_at?: string
+          default_destination?: string
+          departure_time?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+        }
+        Relationships: []
+      }
       maintenances: {
         Row: {
           cost: number | null
@@ -386,6 +413,9 @@ export type Database = {
       }
       trip_passengers: {
         Row: {
+          boarding_location: string
+          consult_location: string
+          consult_time: string
           has_companion: boolean
           id: string
           is_pcd: boolean
@@ -393,6 +423,9 @@ export type Database = {
           trip_id: string
         }
         Insert: {
+          boarding_location?: string
+          consult_location?: string
+          consult_time?: string
           has_companion?: boolean
           id?: string
           is_pcd?: boolean
@@ -400,6 +433,9 @@ export type Database = {
           trip_id: string
         }
         Update: {
+          boarding_location?: string
+          consult_location?: string
+          consult_time?: string
           has_companion?: boolean
           id?: string
           is_pcd?: boolean
@@ -431,6 +467,7 @@ export type Database = {
           departure_time: string
           destination: string
           driver_id: string | null
+          fixed_trip_id: string | null
           id: string
           id_empresa: number | null
           notes: string
@@ -445,6 +482,7 @@ export type Database = {
           departure_time?: string
           destination?: string
           driver_id?: string | null
+          fixed_trip_id?: string | null
           id?: string
           id_empresa?: number | null
           notes?: string
@@ -459,6 +497,7 @@ export type Database = {
           departure_time?: string
           destination?: string
           driver_id?: string | null
+          fixed_trip_id?: string | null
           id?: string
           id_empresa?: number | null
           notes?: string
@@ -472,6 +511,13 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_fixed_trip_id_fkey"
+            columns: ["fixed_trip_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_trips"
             referencedColumns: ["id"]
           },
           {
