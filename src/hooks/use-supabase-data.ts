@@ -339,3 +339,25 @@ export function useBancoHoras(driverId?: string) {
 
   return { registros, loading, save, update, remove, refetch: fetch };
 }
+
+// ── Fixed Trips ──
+export function useFixedTrips() {
+  const [fixedTrips, setFixedTrips] = useState<FixedTrip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    const { data } = await supabase.from('fixed_trips' as any).select('*').order('departure_time');
+    if (data) setFixedTrips((data as any[]).map(r => ({
+      id: r.id,
+      label: r.label,
+      departureTime: r.departure_time || '',
+      defaultDestination: r.default_destination || '',
+      isActive: r.is_active,
+    })));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { fixedTrips, loading, refetch: fetch };
+}
