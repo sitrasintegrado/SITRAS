@@ -150,6 +150,7 @@ export function useTrips() {
       passengers: passMap.get(r.id) || [],
       notes: r.notes,
       status: r.status as Trip['status'],
+      fixedTripId: (r as any).fixed_trip_id || '',
     })));
     setLoading(false);
   }, []);
