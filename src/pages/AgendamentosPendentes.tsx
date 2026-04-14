@@ -43,7 +43,7 @@ const AgendamentosPendentes = () => {
 
   const openAssignDriver = (trip: typeof trips[0]) => {
     setSelectedTrip(trip);
-    setAssignForm({ driverId: '' });
+    setAssignForm({ driverId: '', vehicleId: trip.vehicleId || '' });
     setAssignDriverOpen(true);
   };
 
