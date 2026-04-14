@@ -27,7 +27,7 @@ const AgendamentosPendentes = () => {
   const [confirmForm, setConfirmForm] = useState({
     vehicleId: '', driverId: '', departureTime: '',
   });
-  const [assignForm, setAssignForm] = useState({ driverId: '' });
+  const [assignForm, setAssignForm] = useState({ driverId: '', vehicleId: '' });
 
   const pending = requests.filter(r => r.status === 'Pendente de Aprovação da Frota');
   const others = requests.filter(r => r.status !== 'Pendente de Aprovação da Frota');
@@ -43,7 +43,7 @@ const AgendamentosPendentes = () => {
 
   const openAssignDriver = (trip: typeof trips[0]) => {
     setSelectedTrip(trip);
-    setAssignForm({ driverId: '' });
+    setAssignForm({ driverId: '', vehicleId: trip.vehicleId || '' });
     setAssignDriverOpen(true);
   };
 
@@ -90,17 +90,28 @@ const AgendamentosPendentes = () => {
       return;
     }
 
-    const { error } = await supabase.from('trips').update({
+    const updateData: any = {
       driver_id: assignForm.driverId,
       status: 'Confirmada',
-    } as any).eq('id', selectedTrip.id);
+    };
+
+    // If trip has no vehicle yet (fixed_trip flow), require vehicle selection
+    if (!selectedTrip.vehicleId) {
+      if (!assignForm.vehicleId) {
+        toast({ title: 'Selecione um veículo', variant: 'destructive' });
+        return;
+      }
+      updateData.vehicle_id = assignForm.vehicleId;
+    }
+
+    const { error } = await supabase.from('trips').update(updateData).eq('id', selectedTrip.id);
 
     if (error) {
       toast({ title: 'Erro ao atribuir motorista', description: error.message, variant: 'destructive' });
       return;
     }
 
-    toast({ title: 'Motorista atribuído com sucesso!' });
+    toast({ title: 'Motorista e veículo atribuídos com sucesso!' });
     setAssignDriverOpen(false);
     await refetchTrips();
   };
@@ -306,11 +317,11 @@ const AgendamentosPendentes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Assign Driver Dialog */}
+      {/* Assign Driver + Vehicle Dialog */}
       <Dialog open={assignDriverOpen} onOpenChange={setAssignDriverOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Atribuir Motorista</DialogTitle>
+            <DialogTitle>Atribuir Motorista e Veículo</DialogTitle>
           </DialogHeader>
           {selectedTrip && (
             <div className="space-y-4">
@@ -318,12 +329,26 @@ const AgendamentosPendentes = () => {
                 <p><strong>Destino:</strong> {selectedTrip.destination}</p>
                 <p><strong>Data:</strong> {selectedTrip.date.split('-').reverse().join('/')}</p>
                 <p><strong>Horário:</strong> {selectedTrip.departureTime}</p>
-                <p><strong>Veículo:</strong> {vehicles.find(v => v.id === selectedTrip.vehicleId)?.plate || '-'}</p>
+                {selectedTrip.vehicleId && <p><strong>Veículo:</strong> {vehicles.find(v => v.id === selectedTrip.vehicleId)?.plate || '-'}</p>}
                 <p><strong>Passageiros:</strong> {selectedTrip.passengers.length}</p>
               </div>
+              {/* Show vehicle selector if trip has no vehicle yet */}
+              {!selectedTrip.vehicleId && (
+                <div>
+                  <Label>Veículo *</Label>
+                  <Select value={assignForm.vehicleId} onValueChange={v => setAssignForm({ ...assignForm, vehicleId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar veículo" /></SelectTrigger>
+                    <SelectContent>
+                      {activeVehicles.map(v => (
+                        <SelectItem key={v.id} value={v.id}>{v.type} — {v.plate} ({v.capacity} lugares)</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label>Motorista *</Label>
-                <Select value={assignForm.driverId} onValueChange={v => setAssignForm({ driverId: v })}>
+                <Select value={assignForm.driverId} onValueChange={v => setAssignForm({ ...assignForm, driverId: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecionar motorista" /></SelectTrigger>
                   <SelectContent>
                     {drivers.map(d => (
