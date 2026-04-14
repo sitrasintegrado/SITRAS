@@ -90,17 +90,28 @@ const AgendamentosPendentes = () => {
       return;
     }
 
-    const { error } = await supabase.from('trips').update({
+    const updateData: any = {
       driver_id: assignForm.driverId,
       status: 'Confirmada',
-    } as any).eq('id', selectedTrip.id);
+    };
+
+    // If trip has no vehicle yet (fixed_trip flow), require vehicle selection
+    if (!selectedTrip.vehicleId) {
+      if (!assignForm.vehicleId) {
+        toast({ title: 'Selecione um veículo', variant: 'destructive' });
+        return;
+      }
+      updateData.vehicle_id = assignForm.vehicleId;
+    }
+
+    const { error } = await supabase.from('trips').update(updateData).eq('id', selectedTrip.id);
 
     if (error) {
       toast({ title: 'Erro ao atribuir motorista', description: error.message, variant: 'destructive' });
       return;
     }
 
-    toast({ title: 'Motorista atribuído com sucesso!' });
+    toast({ title: 'Motorista e veículo atribuídos com sucesso!' });
     setAssignDriverOpen(false);
     await refetchTrips();
   };
