@@ -27,7 +27,7 @@ const AgendamentosPendentes = () => {
   const [confirmForm, setConfirmForm] = useState({
     vehicleId: '', driverId: '', departureTime: '',
   });
-  const [assignForm, setAssignForm] = useState({ driverId: '' });
+  const [assignForm, setAssignForm] = useState({ driverId: '', vehicleId: '' });
 
   const pending = requests.filter(r => r.status === 'Pendente de Aprovação da Frota');
   const others = requests.filter(r => r.status !== 'Pendente de Aprovação da Frota');
